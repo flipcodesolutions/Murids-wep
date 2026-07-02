@@ -21,7 +21,7 @@
           <div class="logo-icon">
             <img src="{{ asset('assets/img/logo.png') }}" alt="Murids" class="logo-img">
           </div>
-         
+
         </div>
         <button class="sidebar-close" id="sidebarClose" aria-label="Close menu">
           <i class="bi bi-x-lg"></i>
@@ -35,6 +35,9 @@
         </a>
         <a href="{{ route('religions.index') }}" class="nav-link">
           <i class="bi bi-ui-checks"></i> Religions
+        </a>
+        <a href="{{ route('users.index') }}" class="nav-link">
+          <i class="bi bi-ui-checks"></i> Users
         </a>
         <a href="table.html" class="nav-link active">
           <i class="bi bi-table"></i> Tables
