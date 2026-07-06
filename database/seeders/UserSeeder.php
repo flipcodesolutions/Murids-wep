@@ -12,6 +12,18 @@ class UserSeeder extends Seeder
         $users = [
             [
                 'id' => 1,
+                'name' => 'Admin User',
+                'email' => 'admin@murids.com',
+                'provider' => 'google',
+                'provider_id' => 'google_101',
+                'email_verified_at' => '2026-07-03 14:00:00',
+                'password' => bcrypt('123456'),
+                'remember_token' => null,
+                'created_at' => '2026-07-01 00:00:00',
+                'updated_at' => '2026-07-01 00:00:00',
+            ],
+            [
+                'id' => 2,
                 'name' => 'John Smith',
                 'email' => 'john@example.com',
                 'provider' => 'google',
@@ -23,7 +35,7 @@ class UserSeeder extends Seeder
                 'updated_at' => '2026-07-01 00:00:00',
             ],
             [
-                'id' => 2,
+                'id' => 3,
                 'name' => 'Ravi Patel',
                 'email' => 'ravi@example.com',
                 'provider' => 'google',
@@ -35,7 +47,7 @@ class UserSeeder extends Seeder
                 'updated_at' => '2026-07-01 00:00:00',
             ],
             [
-                'id' => 3,
+                'id' => 4,
                 'name' => 'Ahmed Khan',
                 'email' => 'ahmed@example.com',
                 'provider' => 'google',
@@ -47,7 +59,7 @@ class UserSeeder extends Seeder
                 'updated_at' => '2026-07-01 00:00:00',
             ],
             [
-                'id' => 4,
+                'id' => 5,
                 'name' => 'Gurpreet Singh',
                 'email' => 'gurpreet@example.com',
                 'provider' => 'apple',
@@ -59,7 +71,7 @@ class UserSeeder extends Seeder
                 'updated_at' => '2026-07-01 00:00:00',
             ],
             [
-                'id' => 5,
+                'id' => 6,
                 'name' => 'Tenzin Lama',
                 'email' => 'tenzin@example.com',
                 'provider' => 'google',

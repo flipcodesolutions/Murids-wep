@@ -1,41 +1,38 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 
 class UsersController extends Controller
 {
-    public function index()
-    {
-        return view('admin.users.index');
-    }
-
-    public function create()
-    {
-        return view('admin.users.create');
-    }
-
-    public function edit($id)
-    {
-        $user = User::findOrFail($id);
-
-        return view('admin.users.edit', compact('user'));
-    }
-
-    public function fetch(): JsonResponse
+    public function index(): JsonResponse
     {
         $users = User::orderByDesc('id')->get();
 
         return response()->json([
             'success' => true,
+            'message' => 'Users fetched successfully.',
             'data' => $users,
-        ]);
+        ], 200);
     }
 
-    public function store(Request $request): JsonResponse
+    public function show($id): JsonResponse
+    {
+        $user = User::findOrFail($id);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'User fetched successfully.',
+            'data' => $user,
+        ], 200);
+    }
+
+    public function register(Request $request): JsonResponse
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -46,14 +43,15 @@ class UsersController extends Controller
             'password' => 'required|string|min:8|confirmed',
         ]);
 
-        $validated['password'] = bcrypt($validated['password']);
+        $validated['password'] = Hash::make($validated['password']);
 
         $user = User::create($validated);
 
         return response()->json([
             'success' => true,
+            'message' => 'User registered successfully.',
             'data' => $user,
-        ]);
+        ], 201);
     }
 
     public function update(Request $request, $id): JsonResponse
@@ -70,7 +68,7 @@ class UsersController extends Controller
         ]);
 
         if (!empty($validated['password'])) {
-            $validated['password'] = bcrypt($validated['password']);
+            $validated['password'] = Hash::make($validated['password']);
         } else {
             unset($validated['password']);
         }
@@ -79,8 +77,9 @@ class UsersController extends Controller
 
         return response()->json([
             'success' => true,
+            'message' => 'User updated successfully.',
             'data' => $user,
-        ]);
+        ], 200);
     }
 
     public function destroy($id): JsonResponse
@@ -91,7 +90,6 @@ class UsersController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'User deleted successfully.',
-        ]);
+        ], 200);
     }
-    
 }
