@@ -32,26 +32,33 @@
 
             <nav class="sidebar-nav">
                 <div class="nav-label">Main Menu</div>
-                <a href="{{ route('dashboard') }}" class="nav-link">
+
+                <a href="{{ route('dashboard') }}" class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}">
                     <i class="bi bi-speedometer2"></i> Dashboard
                 </a>
-                <a href="{{ route('religions.index') }}" class="nav-link">
+
+                <a href="{{ route('religions.index') }}" class="nav-link {{ request()->routeIs('religions.*') ? 'active' : '' }}">
                     <i class="bi bi-ui-checks"></i> Religions
                 </a>
-                <a href="{{ route('questions.index') }}" class="nav-link">
+
+                <a href="{{ route('onboarding-steps.index') }}" class="nav-link {{ request()->routeIs('onboarding-steps.*') ? 'active' : '' }}">
+                    <i class="bi bi-bar-chart-steps"></i> Onboarding Questions
+                </a>
+
+                <a href="{{ route('questions.index') }}" class="nav-link {{ request()->routeIs('questions.*') ? 'active' : '' }}">
                     <i class="bi bi-patch-question"></i> Questions
                 </a>
-                <a href="{{ route('users.index') }}" class="nav-link">
+
+                <a href="{{ route('users.index') }}" class="nav-link {{ request()->routeIs('users.*') ? 'active' : '' }}">
                     <i class="bi bi-people"></i> Users
                 </a>
-                <a href="{{ route('answers.index') }}" class="nav-link">
+
+                <a href="{{ route('answers.index') }}" class="nav-link {{ request()->routeIs('answers.*') ? 'active' : '' }}">
                     <i class="bi bi-chat-square-text"></i> Reports
                 </a>
-                {{-- <a href="table.html" class="nav-link active">
-          <i class="bi bi-table"></i> Tables
-        </a> --}}
 
                 <div class="nav-label mt-3">Account</div>
+
                 <a href="{{ route('logout') }}" class="nav-link">
                     <i class="bi bi-box-arrow-left"></i> Logout
                 </a>

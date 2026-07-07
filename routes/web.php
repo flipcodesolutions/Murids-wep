@@ -40,6 +40,6 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/onboarding-steps/data', [OnboardingStepController::class, 'fetch'])->name('onboarding-steps.fetch');
     Route::post('/onboarding-steps/store', [OnboardingStepController::class, 'store'])->name('onboarding-steps.store');
     Route::get('/onboarding-steps/{onboarding_step}/edit', [OnboardingStepController::class, 'edit'])->name('onboarding-steps.edit');
-    Route::post('/onboarding-steps/{onboarding_step}/update', [OnboardingStepController::class, 'update'])->name('onboarding-steps.update');
+    Route::put('/onboarding-steps/{onboarding_step}/update', [OnboardingStepController::class, 'update'])->name('onboarding-steps.update');
     Route::delete('/onboarding-steps/{onboarding_step}', [OnboardingStepController::class, 'destroy'])->name('onboarding-steps.destroy');
 });

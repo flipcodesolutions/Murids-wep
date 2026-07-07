@@ -31,38 +31,30 @@
                         <div class="invalid-feedback">Please select a religion.</div>
                     </div>
 
-                    <div class="col-md-6">
-                        <label for="step_no" class="form-label-custom">Step No <span class="text-danger">*</span></label>
-                        <input type="number" min="1" class="form-control form-control-custom" id="step_no" name="step_no" value="{{ $onboardingStep->step_no }}" required>
-                        <div class="invalid-feedback">Please enter a valid step number.</div>
-                    </div>
-
                     <div class="col-12">
                         <label for="question" class="form-label-custom">Question <span class="text-danger">*</span></label>
-                        <textarea class="form-control form-control-custom" id="question" name="question" rows="4" required>{{ $onboardingStep->question }}</textarea>
+                        <textarea class="form-control form-control-custom" id="question" name="question" rows="4" placeholder="Enter question here..." required>{{ $onboardingStep->question }}</textarea>
                         <div class="invalid-feedback">Please enter a question.</div>
                     </div>
 
                     <div class="col-12">
                         <label class="form-label-custom">Options <span class="text-danger">*</span></label>
                         <div id="optionsWrapper">
-                            @foreach (($onboardingStep->options ?? []) as $option)
+                            @forelse (($onboardingStep->options ?? []) as $option)
                                 <div class="input-group mb-2 option-row">
                                     <input type="text" name="options[]" class="form-control form-control-custom" value="{{ $option }}" placeholder="Enter option" required>
                                     <button type="button" class="btn btn-outline-danger removeOptionBtn">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </div>
-                            @endforeach
-
-                            @if (empty($onboardingStep->options) || count($onboardingStep->options) === 0)
+                            @empty
                                 <div class="input-group mb-2 option-row">
                                     <input type="text" name="options[]" class="form-control form-control-custom" placeholder="Enter option" required>
                                     <button type="button" class="btn btn-outline-danger removeOptionBtn d-none">
                                         <i class="bi bi-trash"></i>
                                     </button>
                                 </div>
-                            @endif
+                            @endforelse
                         </div>
 
                         <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="addOptionBtn">
@@ -144,7 +136,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     form.addEventListener('submit', function(e) {
         e.preventDefault();
-
         optionsError.textContent = '';
 
         if (!form.checkValidity()) {

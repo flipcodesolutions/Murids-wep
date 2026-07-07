@@ -24,10 +24,8 @@
                     </div>
 
                     <div class="col-md-6">
-                        <label for="stepFilter" class="form-label">Step No</label>
-                        <select id="stepFilter" class="form-select form-select-md">
-                            <option value="">All Steps</option>
-                        </select>
+                        <label for="questionFilter" class="form-label">Question</label>
+                        <input type="text" id="questionFilter" class="form-control form-control-md" placeholder="Search question...">
                     </div>
                 </div>
             </div>
@@ -39,7 +37,6 @@
                             <tr>
                                 <th>#</th>
                                 <th>Religion</th>
-                                <th>Step No</th>
                                 <th>Question</th>
                                 <th>Options</th>
                                 <th>Actions</th>
@@ -47,7 +44,7 @@
                         </thead>
                         <tbody id="stepTableBody">
                             <tr>
-                                <td colspan="6" class="text-center py-4 text-muted">Loading onboarding steps...</td>
+                                <td colspan="5" class="text-center py-4 text-muted">Loading onboarding steps...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -63,7 +60,6 @@
         </div>
     </div>
 @endsection
-
 @push('scripts')
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -76,7 +72,7 @@
             const tableInfo = document.getElementById('tableInfo');
             const paginationWrapper = document.getElementById('paginationWrapper');
             const religionFilter = document.getElementById('religionFilter');
-            const stepFilter = document.getElementById('stepFilter');
+            const questionFilter = document.getElementById('questionFilter');
 
             let allSteps = [];
             let filteredSteps = [];
@@ -118,11 +114,13 @@
 
             function renderOptions(options) {
                 if (!Array.isArray(options) || !options.length) return '-';
-                return options.map(option => `<span class="badge bg-light text-dark border me-1 mb-1">${escapeHtml(option)}</span>`).join('');
+                return options.map(option =>
+                    `<span class="badge bg-light text-dark border me-1 mb-1">${escapeHtml(option)}</span>`
+                ).join('');
             }
 
             async function fetchAll() {
-                tableBody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">Loading onboarding steps...</td></tr>';
+                tableBody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted">Loading onboarding steps...</td></tr>';
 
                 try {
                     const response = await fetch(fetchUrl, {
@@ -142,7 +140,7 @@
                     populateFilters();
                     renderPage(1);
                 } catch (error) {
-                    tableBody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-danger">Failed to load onboarding steps.</td></tr>';
+                    tableBody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-danger">Failed to load onboarding steps.</td></tr>';
                     tableInfo.textContent = 'Failed to load data.';
                     paginationWrapper.innerHTML = '';
                     showToast('Could not load onboarding steps.', 'error');
@@ -151,23 +149,23 @@
 
             function populateFilters() {
                 const religionValues = [...new Set(allSteps.map(item => item.religion?.name).filter(Boolean))].sort();
-                const stepValues = [...new Set(allSteps.map(item => item.step_no).filter(Boolean))].sort((a, b) => a - b);
 
                 religionFilter.innerHTML = '<option value="">All Religions</option>' +
                     religionValues.map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('');
-
-                stepFilter.innerHTML = '<option value="">All Steps</option>' +
-                    stepValues.map(step => `<option value="${step}">${step}</option>`).join('');
             }
 
             function applyFilters() {
-                const selectedReligion = religionFilter.value;
-                const selectedStep = stepFilter.value;
+                const selectedReligion = religionFilter.value.trim().toLowerCase();
+                const questionKeyword = questionFilter.value.trim().toLowerCase();
 
                 filteredSteps = allSteps.filter(item => {
-                    const religionMatch = !selectedReligion || (item.religion?.name || '') === selectedReligion;
-                    const stepMatch = !selectedStep || String(item.step_no) === selectedStep;
-                    return religionMatch && stepMatch;
+                    const religionName = (item.religion?.name || '').trim().toLowerCase();
+                    const questionText = (item.question || '').trim().toLowerCase();
+
+                    const religionMatch = !selectedReligion || religionName === selectedReligion;
+                    const questionMatch = !questionKeyword || questionText.includes(questionKeyword);
+
+                    return religionMatch && questionMatch;
                 });
 
                 renderPage(1);
@@ -175,29 +173,28 @@
 
             function renderRows(rows, page = 1) {
                 if (!rows.length) {
-                    tableBody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">No onboarding steps found.</td></tr>';
+                    tableBody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted">No onboarding steps found.</td></tr>';
                     return;
                 }
 
                 tableBody.innerHTML = rows.map((item, index) => `
-            <tr data-id="${item.id}">
-                <td>${((page - 1) * perPage) + index + 1}</td>
-                <td>${escapeHtml(item.religion?.name || '-')}</td>
-                <td>${escapeHtml(item.step_no || '-')}</td>
-                <td>${escapeHtml(truncateText(item.question, 80))}</td>
-                <td>${renderOptions(item.options)}</td>
-                <td>
-                    <div class="table-actions">
-                        <a href="${editUrl}/${item.id}/edit" class="btn-action edit" title="Edit">
-                            <i class="bi bi-pencil"></i>
-                        </a>
-                        <button type="button" class="btn-action delete" title="Delete" data-id="${item.id}">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </div>
-                </td>
-            </tr>
-        `).join('');
+                <tr data-id="${item.id}">
+                    <td>${((page - 1) * perPage) + index + 1}</td>
+                    <td>${escapeHtml(item.religion?.name || '-')}</td>
+                    <td>${escapeHtml(truncateText(item.question, 80))}</td>
+                    <td>${renderOptions(item.options)}</td>
+                    <td>
+                        <div class="table-actions">
+                            <a href="${editUrl}/${item.id}/edit" class="btn-action edit" title="Edit">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <button type="button" class="btn-action delete" title="Delete" data-id="${item.id}">
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
 
                 tableBody.querySelectorAll('.btn-action.delete').forEach(btn => {
                     btn.addEventListener('click', function() {
@@ -302,7 +299,7 @@
             }
 
             religionFilter.addEventListener('change', applyFilters);
-            stepFilter.addEventListener('change', applyFilters);
+            questionFilter.addEventListener('input', applyFilters);
 
             fetchAll();
         });

@@ -7,7 +7,6 @@ use App\Models\Religion;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReligionController extends Controller
 {
@@ -36,26 +35,17 @@ class ReligionController extends Controller
         ]);
     }
 
-    public function image(Religion $religion): StreamedResponse
-    {
-        if (! $religion->image || ! Storage::disk('local')->exists($religion->image)) {
-            abort(404);
-        }
-
-        return Storage::disk('local')->response($religion->image);
-    }
-
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255|unique:religions,name',
             'description' => 'nullable|string',
-            'image' => 'nullable|image|max:2048',
+            'image' => 'nullable|file|mimes:jpg,jpeg,png,gif,webp,svg|max:2048',
             'status' => 'nullable',
         ]);
 
         if ($request->hasFile('image')) {
-            $validated['image'] = $request->file('image')->store('religions', 'local');
+            $validated['image'] = $request->file('image')->store('religions', 'public');
         }
 
         $validated['status'] = $request->boolean('status', true);
@@ -74,13 +64,13 @@ class ReligionController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255|unique:religions,name,'.$religion->id,
             'description' => 'nullable|string',
-            'image' => 'nullable|image|max:2048',
+            'image' => 'nullable|file|mimes:jpg,jpeg,png,gif,webp,svg|max:2048',
             'status' => 'nullable',
         ]);
 
         if ($request->hasFile('image')) {
             $this->deleteImage($religion->image);
-            $validated['image'] = $request->file('image')->store('religions', 'local');
+            $validated['image'] = $request->file('image')->store('religions', 'public');
         }
 
         $validated['status'] = $request->boolean('status', true);
@@ -107,8 +97,8 @@ class ReligionController extends Controller
 
     private function deleteImage(?string $path): void
     {
-        if ($path && Storage::disk('local')->exists($path)) {
-            Storage::disk('local')->delete($path);
+        if ($path && Storage::disk('public')->exists($path)) {
+            Storage::disk('public')->delete($path);
         }
     }
 }

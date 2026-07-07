@@ -20,12 +20,17 @@ class OnboardingStepController extends Controller
     {
         $religions = Religion::where('status', 1)->orderBy('name')->get();
 
-        return view('admin.onboarding.create', compact('religions', 'timeSlots'));
+        return view('admin.onboarding.create', compact('religions'));
     }
 
     public function edit($id)
     {
-        return view('admin.onboarding.edit', compact('id'));
+        $religions = Religion::where('status', 1)->orderBy('name')->get();
+        $onboardingStep = OnboardingStep::with(['religion'])
+            ->where('id', $id)
+            ->firstOrFail();
+
+        return view('admin.onboarding.edit', compact('religions', 'onboardingStep'));
     }
 
     public function fetch(): JsonResponse
@@ -40,18 +45,16 @@ class OnboardingStepController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'question' => 'required|string|max:255|unique:questions,question',
+            'question' => 'required|string|max:255',
             'religion_id' => 'required|exists:religions,id',
-            'option' => 'required|array|min:1',
-            'option.*' => 'required|string|max:255',
-            'status' => 'nullable|in:0,1',
+            'options' => 'required|array|min:1',
+            'options.*' => 'required|string|max:255',
         ]);
 
         OnboardingStep::create([
             'question' => $validated['question'],
             'religion_id' => $validated['religion_id'],
-            'option' => $validated['option'],
-            'status' => $validated['status'] ?? 0,
+            'options' => $validated['options'],
         ]);
 
         return response()->json([
@@ -63,11 +66,10 @@ class OnboardingStepController extends Controller
     public function update(Request $request, OnboardingStep $onboardingStep): JsonResponse
     {
         $validated = $request->validate([
-            'question' => 'required|string|max:255|unique:questions,question,'.$onboardingStep->id,
+            'question' => 'required|string|max:255',
             'religion_id' => 'required|exists:religions,id',
-            'option' => 'required|array|min:1',
-            'option.*' => 'required|string|max:255',
-            'status' => 'nullable|in:0,1',
+            'options' => 'required|array|min:1',
+            'options.*' => 'required|string|max:255',
         ]);
 
         $onboardingStep->update($validated);

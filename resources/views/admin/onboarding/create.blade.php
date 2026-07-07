@@ -18,7 +18,7 @@
                 <form id="onboardingStepForm" novalidate>
                     <div class="row g-4">
 
-                        <div class="col-md-6">
+                        <div class="col-md-12">
                             <label for="religion_id" class="form-label-custom">Religion <span class="text-danger">*</span></label>
                             <select class="form-select form-control-custom" id="religion_id" name="religion_id" required>
                                 <option value="">Select Religion</option>
@@ -27,12 +27,6 @@
                                 @endforeach
                             </select>
                             <div class="invalid-feedback">Please select a religion.</div>
-                        </div>
-
-                        <div class="col-md-6">
-                            <label for="step_no" class="form-label-custom">Step No <span class="text-danger">*</span></label>
-                            <input type="number" min="1" class="form-control form-control-custom" id="step_no" name="step_no" placeholder="Enter step number" required>
-                            <div class="invalid-feedback">Please enter a valid step number.</div>
                         </div>
 
                         <div class="col-12">
@@ -51,6 +45,7 @@
                                     </button>
                                 </div>
                             </div>
+
                             <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="addOptionBtn">
                                 <i class="bi bi-plus-lg me-1"></i> Add Option
                             </button>
@@ -108,7 +103,7 @@
 
             function toggleRemoveButtons() {
                 const rows = document.querySelectorAll('.option-row');
-                rows.forEach((row, index) => {
+                rows.forEach(row => {
                     const btn = row.querySelector('.removeOptionBtn');
                     if (btn) btn.classList.toggle('d-none', rows.length === 1);
                 });
@@ -130,7 +125,6 @@
 
             form.addEventListener('submit', function(e) {
                 e.preventDefault();
-
                 optionsError.textContent = '';
 
                 if (!form.checkValidity()) {

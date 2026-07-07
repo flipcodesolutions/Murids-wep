@@ -12,7 +12,6 @@ class OnboardingStep extends Model
         'religion_id',
         'question',
         'options',
-        'step_no',
     ];
 
     protected $casts = [

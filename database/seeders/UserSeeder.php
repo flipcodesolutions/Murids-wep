@@ -15,7 +15,7 @@ class UserSeeder extends Seeder
                 'name' => 'Admin User',
                 'email' => 'admin@murids.com',
                 'provider' => 'google',
-                'provider_id' => 'google_101',
+                'provider_id' => 'google_100',
                 'email_verified_at' => '2026-07-03 14:00:00',
                 'password' => bcrypt('123456'),
                 'remember_token' => null,
