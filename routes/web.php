@@ -11,6 +11,9 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', [AuthController::class, 'login'])->name('login');
 Route::post('/login', [AuthController::class, 'authenticate'])->name('login.submit');
 Route::get('/logout', [AuthController::class, 'logout'])->name('logout');
+Route::get('/sample', function () {
+    return view('sample');
+});
 
 Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/dashboard', [AuthController::class, 'index'])->name('dashboard');

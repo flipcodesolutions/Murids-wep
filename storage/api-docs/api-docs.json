@@ -1,0 +1,399 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "Murids API Documentation",
+        "description": "API documentation for Murids Application",
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "http://127.0.0.1:8000",
+            "description": "Murids API Server"
+        }
+    ],
+    "paths": {
+        "/api/onboarding-steps": {
+            "get": {
+                "tags": [
+                    "Onboarding Steps"
+                ],
+                "summary": "Get onboarding steps",
+                "description": "Returns list of onboarding steps filtered by active religions",
+                "operationId": "getOnboardingSteps",
+                "parameters": [
+                    {
+                        "name": "religion_id",
+                        "in": "query",
+                        "description": "Filter by Religion ID",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                }
+            }
+        },
+        "/api/users": {
+            "get": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Get list of users",
+                "description": "Returns list of users",
+                "operationId": "getUsersList",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                }
+            }
+        },
+        "/api/users/{id}": {
+            "get": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Get user details by ID",
+                "description": "Returns user data",
+                "operationId": "getUserById",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "User ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    },
+                    "404": {
+                        "description": "User not found"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Update user details",
+                "description": "Updates user profile information",
+                "operationId": "updateUser",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "User ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "email",
+                                    "user_type",
+                                    "provider"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "John Doe"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "john@example.com"
+                                    },
+                                    "user_type": {
+                                        "type": "string",
+                                        "example": "user",
+                                        "enum": [
+                                            "user"
+                                        ]
+                                    },
+                                    "provider": {
+                                        "type": "string",
+                                        "example": "other",
+                                        "enum": [
+                                            "google",
+                                            "apple",
+                                            "other"
+                                        ]
+                                    },
+                                    "provider_id": {
+                                        "type": "string",
+                                        "example": "123456789",
+                                        "nullable": true
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "secret123",
+                                        "nullable": true
+                                    },
+                                    "password_confirmation": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "secret123",
+                                        "nullable": true
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "User updated successfully"
+                    },
+                    "404": {
+                        "description": "User not found"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Delete user account",
+                "description": "Deletes a user by ID",
+                "operationId": "deleteUser",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "User ID",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "User deleted successfully"
+                    },
+                    "404": {
+                        "description": "User not found"
+                    }
+                }
+            }
+        },
+        "/api/register": {
+            "post": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Register a new user",
+                "description": "Creates a new user account",
+                "operationId": "registerUser",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "email",
+                                    "user_type",
+                                    "provider",
+                                    "password",
+                                    "password_confirmation"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "example": "John Doe"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "john@example.com"
+                                    },
+                                    "user_type": {
+                                        "type": "string",
+                                        "example": "user",
+                                        "enum": [
+                                            "admin",
+                                            "user"
+                                        ]
+                                    },
+                                    "provider": {
+                                        "type": "string",
+                                        "example": "other",
+                                        "enum": [
+                                            "google",
+                                            "apple",
+                                            "other"
+                                        ]
+                                    },
+                                    "provider_id": {
+                                        "type": "string",
+                                        "example": "123456789",
+                                        "nullable": true
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "secret123"
+                                    },
+                                    "password_confirmation": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "secret123"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "User registered successfully"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                }
+            }
+        },
+        "/api/login": {
+            "post": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Authenticate user and login",
+                "description": "Logs in a user with email and password",
+                "operationId": "loginUser",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "email",
+                                    "password"
+                                ],
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "john@example.com"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "secret123"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Login successful"
+                    },
+                    "401": {
+                        "description": "Invalid credentials"
+                    }
+                }
+            }
+        },
+        "/api/google/redirect": {
+            "get": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Redirect to Google OAuth Login",
+                "description": "Redirects the client to Google's authentication page",
+                "operationId": "redirectToGoogle",
+                "responses": {
+                    "302": {
+                        "description": "Redirect to Google OAuth"
+                    }
+                }
+            }
+        },
+        "/api/google/callback": {
+            "get": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Google OAuth Callback Redirect URL",
+                "description": "Google OAuth redirect callback endpoint handling user creation/login",
+                "operationId": "handleGoogleCallback",
+                "responses": {
+                    "200": {
+                        "description": "Google authentication successful"
+                    },
+                    "422": {
+                        "description": "Authentication failed"
+                    }
+                }
+            }
+        },
+        "/api/apple/redirect": {
+            "get": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Redirect to Apple OAuth Login",
+                "description": "Redirects the client to Apple's authentication page",
+                "operationId": "redirectToApple",
+                "responses": {
+                    "302": {
+                        "description": "Redirect to Apple OAuth"
+                    }
+                }
+            }
+        },
+        "/api/apple/callback": {
+            "get": {
+                "tags": [
+                    "Users"
+                ],
+                "summary": "Apple OAuth Callback Redirect URL",
+                "description": "Apple OAuth redirect callback endpoint handling user creation/login",
+                "operationId": "handleAppleCallback",
+                "responses": {
+                    "200": {
+                        "description": "Apple authentication successful"
+                    },
+                    "422": {
+                        "description": "Authentication failed"
+                    }
+                }
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Onboarding Steps",
+            "description": "API Endpoints for Onboarding Steps"
+        },
+        {
+            "name": "Users",
+            "description": "API Endpoints for Users and Authentication"
+        }
+    ]
+}

@@ -47,7 +47,10 @@
             </div>
 
             <div class="card-body-custom border-top table-footer">
-                <span class="text-muted" id="tableInfo" style="font-size: 0.85rem;">Loading...</span>
+                <div class="table-footer-inner">
+                    <span class="text-muted table-footer-info" id="tableInfo">Loading...</span>
+                    <div id="paginationWrapper" class="theme-pagination"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -60,12 +63,14 @@
             const fetchUrl = @json(route('religions.fetch'));
             const destroyUrl = @json(url('/religions'));
             const editUrl = @json(url('/religions'));
+            const storageBaseUrl = @json(asset('storage'));
             const noImageUrl = @json(asset('images/no-image.png'));
             const tableBody = document.getElementById('religionTableBody');
             const table = document.getElementById('dataTable');
             const searchInput = document.getElementById('tableSearch');
 
-            let allReligions = [];
+            let currentPage = 1;
+            let currentSearch = '';
 
             function getCsrfToken() {
                 const meta = document.querySelector('meta[name="csrf-token"]');
@@ -124,57 +129,51 @@
                 });
             }
 
-            function updateTableInfo(count, total = count) {
-                const info = document.getElementById('tableInfo');
-                if (!info) return;
-
-                info.textContent = count === 0 ?
-                    'No religions found.' :
-                    `Showing ${count} of ${total} entries`;
-            }
-
             function getImageUrl(imagePath) {
-                return imagePath ? `/storage/${imagePath}` : noImageUrl;
+                if (!imagePath) return noImageUrl;
+                if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+                    return imagePath;
+                }
+                return `${storageBaseUrl}/${imagePath.replace(/^\/+/, '')}`;
             }
 
-            function renderRows(religions) {
+            function renderRows(religions, page = 1, perPage = 10) {
                 if (!religions.length) {
                     tableBody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">No religions found. Add your first religion.</td></tr>';
-                    updateTableInfo(0, allReligions.length);
                     return;
                 }
 
                 tableBody.innerHTML = religions.map((religion, index) => `
-            <tr data-id="${religion.id}">
-                <td>${index + 1}</td>
-                <td>
-                    <div style="display:flex; align-items:center; gap:10px;">
-                        <img
-                            src="${getImageUrl(religion.image)}"
-                            alt="${escapeHtml(religion.name)}"
-                            width="40"
-                            height="40"
-                            style="object-fit:cover; border-radius:6px;"
-                            onerror="this.onerror=null;this.src='${noImageUrl}';"
-                        >
-                        <span>${escapeHtml(religion.name)}</span>
-                    </div>
-                </td>
-                <td>${escapeHtml(truncateText(religion.description, 60))}</td>
-                <td>${getStatusBadge(religion.status)}</td>
-                <td>${formatDate(religion.created_at)}</td>
-                <td>
-                    <div class="table-actions">
-                        <a href="${editUrl}/${religion.id}/edit" class="btn-action edit" title="Edit">
-                            <i class="bi bi-pencil"></i>
-                        </a>
-                        <button class="btn-action delete" title="Delete" data-id="${religion.id}">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </div>
-                </td>
-            </tr>
-        `).join('');
+                    <tr data-id="${religion.id}">
+                        <td>${((page - 1) * perPage) + index + 1}</td>
+                        <td>
+                            <div style="display:flex; align-items:center; gap:10px;">
+                                <img
+                                    src="${getImageUrl(religion.image)}"
+                                    alt="${escapeHtml(religion.name)}"
+                                    width="40"
+                                    height="40"
+                                    style="object-fit:cover; border-radius:6px;"
+                                    onerror="this.onerror=null;this.src='${noImageUrl}';"
+                                >
+                                <span>${escapeHtml(religion.name)}</span>
+                            </div>
+                        </td>
+                        <td>${escapeHtml(truncateText(religion.description, 60))}</td>
+                        <td>${getStatusBadge(religion.status)}</td>
+                        <td>${formatDate(religion.created_at)}</td>
+                        <td>
+                            <div class="table-actions">
+                                <a href="${editUrl}/${religion.id}/edit" class="btn-action edit" title="Edit">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <button type="button" class="btn-action delete" title="Delete" data-id="${religion.id}">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('');
 
                 tableBody.querySelectorAll('.btn-action.delete').forEach(btn => {
                     btn.addEventListener('click', function() {
@@ -183,11 +182,17 @@
                 });
 
                 applyResponsiveLabels();
-                updateTableInfo(religions.length, allReligions.length);
             }
 
-            function loadReligions() {
-                fetch(fetchUrl, {
+            function loadReligions(page = 1, search = '') {
+                currentPage = page;
+                currentSearch = search;
+
+                const url = new URL(fetchUrl, window.location.origin);
+                url.searchParams.set('page', page);
+                if (search) url.searchParams.set('search', search);
+
+                fetch(url.toString(), {
                         method: 'GET',
                         headers: {
                             'Accept': 'application/json',
@@ -199,12 +204,12 @@
                         return data;
                     }))
                     .then(result => {
-                        allReligions = result.data || [];
-                        renderRows(allReligions);
+                        renderRows(result.data || [], result.current_page, result.per_page);
+                        renderPagination(result, 'paginationWrapper', 'tableInfo', page => loadReligions(page, currentSearch));
                     })
                     .catch(error => {
                         tableBody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-danger">Failed to load religions.</td></tr>';
-                        updateTableInfo(0, 0);
+                        renderPagination({}, 'paginationWrapper', 'tableInfo');
                         showToast('Could not load religions. Please refresh the page.', 'error');
                         console.error(error);
                     });
@@ -223,7 +228,6 @@
                 }).then((result) => {
                     if (!result.isConfirmed) return;
 
-                    const row = btn.closest('tr');
                     btn.disabled = true;
 
                     fetch(`${destroyUrl}/${id}`, {
@@ -239,47 +243,30 @@
                             if (!response.ok) throw data;
                             return data;
                         }))
-                        .then(result => {
-                            if (row) {
-                                row.style.transition = 'opacity 0.3s ease';
-                                row.style.opacity = '0';
-
-                                setTimeout(() => {
-                                    allReligions = allReligions.filter(item => item.id != id);
-                                    renderRows(allReligions);
-                                }, 300);
-                            }
-
-                            showToast(result.message || 'Religion deleted successfully.', 'success');
+                        .then(res => {
+                            showToast(res.message || 'Religion deleted successfully.', 'success');
+                            loadReligions(currentPage, currentSearch);
                         })
                         .catch(error => {
                             btn.disabled = false;
-
-                            const message = error?.message ||
-                                (error?.errors ? Object.values(error.errors).flat().join(' ') : '') ||
-                                'Failed to delete religion.';
-
+                            const message = error?.message || 'Failed to delete religion.';
                             showToast(message, 'error');
                         });
                 });
             }
 
             if (searchInput) {
+                let searchTimeout;
                 searchInput.addEventListener('input', function() {
-                    const keyword = this.value.toLowerCase().trim();
-
-                    const filtered = allReligions.filter(religion => {
-                        return (
-                            (religion.name && religion.name.toLowerCase().includes(keyword)) ||
-                            (religion.description && religion.description.toLowerCase().includes(keyword))
-                        );
-                    });
-
-                    renderRows(filtered);
+                    const keyword = this.value.trim();
+                    clearTimeout(searchTimeout);
+                    searchTimeout = setTimeout(() => {
+                        loadReligions(1, keyword);
+                    }, 300);
                 });
             }
 
-            loadReligions();
+            loadReligions(1, '');
         });
     </script>
 @endpush

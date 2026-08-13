@@ -66,18 +66,16 @@
             const fetchUrl = @json(route('onboarding-steps.fetch'));
             const destroyUrl = @json(url('/onboarding-steps'));
             const editUrl = @json(url('/onboarding-steps'));
+            const religionsUrl = @json(route('religions.fetch'));
 
             const tableBody = document.getElementById('stepTableBody');
             const table = document.getElementById('dataTable');
-            const tableInfo = document.getElementById('tableInfo');
-            const paginationWrapper = document.getElementById('paginationWrapper');
             const religionFilter = document.getElementById('religionFilter');
             const questionFilter = document.getElementById('questionFilter');
 
-            let allSteps = [];
-            let filteredSteps = [];
             let currentPage = 1;
-            const perPage = 10;
+            let currentReligion = '';
+            let currentSearch = '';
 
             function getCsrfToken() {
                 const meta = document.querySelector('meta[name="csrf-token"]');
@@ -104,6 +102,7 @@
             }
 
             function applyResponsiveLabels() {
+                if (!table) return;
                 const headers = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent.trim());
                 table.querySelectorAll('tbody tr').forEach(row => {
                     row.querySelectorAll('td').forEach((td, index) => {
@@ -119,82 +118,51 @@
                 ).join('');
             }
 
-            async function fetchAll() {
-                tableBody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted">Loading onboarding steps...</td></tr>';
-
-                try {
-                    const response = await fetch(fetchUrl, {
-                        method: 'GET',
-                        headers: {
-                            'Accept': 'application/json',
-                            'X-Requested-With': 'XMLHttpRequest',
-                        },
-                    });
-
-                    const data = await response.json();
-                    if (!response.ok) throw data;
-
-                    allSteps = data.data || data;
-                    filteredSteps = [...allSteps];
-
-                    populateFilters();
-                    renderPage(1);
-                } catch (error) {
-                    tableBody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-danger">Failed to load onboarding steps.</td></tr>';
-                    tableInfo.textContent = 'Failed to load data.';
-                    paginationWrapper.innerHTML = '';
-                    showToast('Could not load onboarding steps.', 'error');
-                }
+            function loadReligions() {
+                fetch(`${religionsUrl}?per_page=100`, {
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                .then(res => res.json())
+                .then(result => {
+                    const religions = result.data || [];
+                    religionFilter.innerHTML = '<option value="">All Religions</option>' +
+                        religions.map(r => `<option value="${r.id}">${escapeHtml(r.name)}</option>`).join('');
+                })
+                .catch(err => console.error(err));
             }
 
-            function populateFilters() {
-                const religionValues = [...new Set(allSteps.map(item => item.religion?.name).filter(Boolean))].sort();
-
-                religionFilter.innerHTML = '<option value="">All Religions</option>' +
-                    religionValues.map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('');
+            function buildFetchUrl(page = 1, religionId = '', search = '') {
+                const url = new URL(fetchUrl, window.location.origin);
+                url.searchParams.set('page', page);
+                if (religionId) url.searchParams.set('religion_id', religionId);
+                if (search) url.searchParams.set('search', search);
+                return url.toString();
             }
 
-            function applyFilters() {
-                const selectedReligion = religionFilter.value.trim().toLowerCase();
-                const questionKeyword = questionFilter.value.trim().toLowerCase();
-
-                filteredSteps = allSteps.filter(item => {
-                    const religionName = (item.religion?.name || '').trim().toLowerCase();
-                    const questionText = (item.question || '').trim().toLowerCase();
-
-                    const religionMatch = !selectedReligion || religionName === selectedReligion;
-                    const questionMatch = !questionKeyword || questionText.includes(questionKeyword);
-
-                    return religionMatch && questionMatch;
-                });
-
-                renderPage(1);
-            }
-
-            function renderRows(rows, page = 1) {
+            function renderRows(rows, page = 1, perPage = 10) {
                 if (!rows.length) {
                     tableBody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted">No onboarding steps found.</td></tr>';
                     return;
                 }
 
                 tableBody.innerHTML = rows.map((item, index) => `
-                <tr data-id="${item.id}">
-                    <td>${((page - 1) * perPage) + index + 1}</td>
-                    <td>${escapeHtml(item.religion?.name || '-')}</td>
-                    <td>${escapeHtml(truncateText(item.question, 80))}</td>
-                    <td>${renderOptions(item.options)}</td>
-                    <td>
-                        <div class="table-actions">
-                            <a href="${editUrl}/${item.id}/edit" class="btn-action edit" title="Edit">
-                                <i class="bi bi-pencil"></i>
-                            </a>
-                            <button type="button" class="btn-action delete" title="Delete" data-id="${item.id}">
-                                <i class="bi bi-trash"></i>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-            `).join('');
+                    <tr data-id="${item.id}">
+                        <td>${((page - 1) * perPage) + index + 1}</td>
+                        <td>${escapeHtml(item.religion?.name || '-')}</td>
+                        <td>${escapeHtml(truncateText(item.question, 80))}</td>
+                        <td>${renderOptions(item.options)}</td>
+                        <td>
+                            <div class="table-actions">
+                                <a href="${editUrl}/${item.id}/edit" class="btn-action edit" title="Edit">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <button type="button" class="btn-action delete" title="Delete" data-id="${item.id}">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('');
 
                 tableBody.querySelectorAll('.btn-action.delete').forEach(btn => {
                     btn.addEventListener('click', function() {
@@ -205,55 +173,32 @@
                 applyResponsiveLabels();
             }
 
-            function updateTableInfo(total, pageRows, page) {
-                if (!total || pageRows.length === 0) {
-                    tableInfo.textContent = 'No onboarding steps found.';
-                    return;
-                }
-
-                const from = ((page - 1) * perPage) + 1;
-                const to = from + pageRows.length - 1;
-                tableInfo.textContent = `Showing ${from} to ${to} of ${total} entries`;
-            }
-
-            function renderPagination(totalItems, current) {
-                const last = Math.ceil(totalItems / perPage);
-
-                if (last <= 1) {
-                    paginationWrapper.innerHTML = '';
-                    return;
-                }
-
-                let html = `<div class="pagination-group">`;
-                html += `<button type="button" class="page-btn nav-btn" data-page="${current - 1}" ${current === 1 ? 'disabled' : ''}><i class="bi bi-chevron-left"></i></button>`;
-
-                for (let i = 1; i <= last; i++) {
-                    html += `<button type="button" class="page-btn ${i === current ? 'active' : ''}" data-page="${i}">${i}</button>`;
-                }
-
-                html += `<button type="button" class="page-btn nav-btn" data-page="${current + 1}" ${current === last ? 'disabled' : ''}><i class="bi bi-chevron-right"></i></button>`;
-                html += `</div>`;
-
-                paginationWrapper.innerHTML = html;
-
-                paginationWrapper.querySelectorAll('.page-btn[data-page]').forEach(btn => {
-                    btn.addEventListener('click', function() {
-                        if (this.disabled) return;
-                        const page = parseInt(this.dataset.page);
-                        if (!isNaN(page)) renderPage(page);
-                    });
-                });
-            }
-
-            function renderPage(page = 1) {
+            function loadSteps(page = 1, religionId = '', search = '') {
                 currentPage = page;
-                const start = (page - 1) * perPage;
-                const end = start + perPage;
-                const pageRows = filteredSteps.slice(start, end);
+                currentReligion = religionId;
+                currentSearch = search;
 
-                renderRows(pageRows, page);
-                updateTableInfo(filteredSteps.length, pageRows, page);
-                renderPagination(filteredSteps.length, page);
+                fetch(buildFetchUrl(page, religionId, search), {
+                        method: 'GET',
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                    })
+                    .then(async response => {
+                        const data = await response.json();
+                        if (!response.ok) throw data;
+                        return data;
+                    })
+                    .then(result => {
+                        renderRows(result.data || [], result.current_page, result.per_page);
+                        renderPagination(result, 'paginationWrapper', 'tableInfo', page => loadSteps(page, currentReligion, currentSearch));
+                    })
+                    .catch(error => {
+                        tableBody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-danger">Failed to load onboarding steps.</td></tr>';
+                        renderPagination({}, 'paginationWrapper', 'tableInfo');
+                        console.error(error);
+                    });
             }
 
             function deleteStep(id, btn) {
@@ -287,8 +232,7 @@
                         })
                         .then(result => {
                             showToast(result.message || 'Onboarding step deleted successfully.', 'success');
-                            allSteps = allSteps.filter(item => item.id != id);
-                            applyFilters();
+                            loadSteps(currentPage, currentReligion, currentSearch);
                         })
                         .catch(error => {
                             btn.disabled = false;
@@ -298,10 +242,25 @@
                 });
             }
 
-            religionFilter.addEventListener('change', applyFilters);
-            questionFilter.addEventListener('input', applyFilters);
+            if (religionFilter) {
+                religionFilter.addEventListener('change', function() {
+                    loadSteps(1, this.value, currentSearch);
+                });
+            }
 
-            fetchAll();
+            if (questionFilter) {
+                let filterTimeout;
+                questionFilter.addEventListener('input', function() {
+                    const keyword = this.value.trim();
+                    clearTimeout(filterTimeout);
+                    filterTimeout = setTimeout(() => {
+                        loadSteps(1, currentReligion, keyword);
+                    }, 300);
+                });
+            }
+
+            loadReligions();
+            loadSteps(1, '', '');
         });
     </script>
 @endpush

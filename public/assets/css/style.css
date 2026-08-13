@@ -1034,21 +1034,24 @@ svg {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.18s ease;
-    box-shadow: none;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    cursor: pointer;
+    user-select: none;
 }
 
-.theme-pagination .page-btn:hover:not(:disabled) {
-    background: var(--primary-light);
-    color: #ffffff;
-    border-color: #cfd5dc;
+.theme-pagination .page-btn:hover:not(:disabled):not(.active) {
+    background: #f1f5f9;
+    color: var(--primary);
+    border-color: #cbd5e1;
 }
 
 .theme-pagination .page-btn.active {
-    background: var(--primary-light);
+    background: var(--primary);
     color: #ffffff;
-    border-color: #cdd5df;
+    border-color: var(--primary);
     font-weight: 600;
+    box-shadow: 0 2px 4px rgba(14, 87, 44, 0.25);
 }
 
 .theme-pagination .page-btn.nav-btn {
@@ -1061,9 +1064,12 @@ svg {
 }
 
 .theme-pagination .page-btn:disabled {
-    background: #fafafa;
-    color: #b8bfc8;
+    background: #f8fafc;
+    color: #cbd5e1;
+    border-color: #e2e8f0;
     cursor: not-allowed;
+    box-shadow: none;
+    opacity: 0.6;
 }
 
 .theme-pagination .page-dots {

@@ -25,14 +25,21 @@ class ReligionController extends Controller
         return view('admin.religion.edit', compact('religion'));
     }
 
-    public function fetch(): JsonResponse
+    public function fetch(Request $request): JsonResponse
     {
-        $religions = Religion::orderByDesc('id')->get();
+        $query = Religion::orderByDesc('id');
 
-        return response()->json([
-            'success' => true,
-            'data' => $religions,
-        ]);
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('description', 'like', "%{$search}%");
+            });
+        }
+
+        $perPage = (int) $request->input('per_page', 10);
+
+        return response()->json($query->paginate($perPage));
     }
 
     public function store(Request $request): JsonResponse

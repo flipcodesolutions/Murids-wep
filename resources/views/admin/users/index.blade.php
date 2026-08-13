@@ -14,11 +14,6 @@
                         </span>
                         <input type="text" id="tableSearch" class="form-control form-control-sm search-box-input" placeholder="Search users...">
                     </div>
-
-                    {{-- <a href="{{ route('religions.create') }}" class="btn btn-sm btn-accent add-action-btn">
-                        <i class="bi bi-plus-lg me-1"></i>
-                        <span>Add Religion</span>
-                    </a> --}}
                 </div>
             </div>
 
@@ -63,8 +58,6 @@
             const tableBody = document.getElementById('userTableBody');
             const table = document.getElementById('dataTable');
             const tableSearch = document.getElementById('tableSearch');
-            const tableInfo = document.getElementById('tableInfo');
-            const paginationWrapper = document.getElementById('paginationWrapper');
 
             let currentPage = 1;
             let currentSearch = '';
@@ -82,12 +75,6 @@
                 const div = document.createElement('div');
                 div.textContent = text ?? '';
                 return div.innerHTML;
-            }
-
-            function getVerifiedBadge(value) {
-                return value ?
-                    '<span class="badge-status active">Verified</span>' :
-                    '<span class="badge-status inactive">Not Verified</span>';
             }
 
             function applyResponsiveLabels() {
@@ -110,123 +97,29 @@
                 }
 
                 tableBody.innerHTML = users.map((item, index) => `
-                <tr>
-                    <td>${((page - 1) * perPage) + index + 1}</td>
-                    <td>${escapeHtml(item.name || '-')}</td>
-                    <td>${escapeHtml(item.email || '-')}</td>
-                    <td>${escapeHtml(item.user_type || '-')}</td>
-                    <td>${escapeHtml(item.provider || '-')}</td>
-                    <td>${escapeHtml(item.provider_id)}</td>
-                    <td>${formatDate(item.created_at)}</td>
-                </tr>
-            `).join('');
-            }
+                    <tr>
+                        <td>${((page - 1) * perPage) + index + 1}</td>
+                        <td>${escapeHtml(item.name || '-')}</td>
+                        <td>${escapeHtml(item.email || '-')}</td>
+                        <td>${escapeHtml(item.user_type || '-')}</td>
+                        <td>${escapeHtml(item.provider || '-')}</td>
+                        <td>${escapeHtml(item.provider_id || '-')}</td>
+                        <td>${formatDate(item.created_at)}</td>
+                    </tr>
+                `).join('');
 
-            function updateTableInfo(result) {
-                if (!tableInfo) return;
-
-                if (!result.total || result.data.length === 0) {
-                    tableInfo.textContent = 'No users found.';
-                    return;
-                }
-
-                tableInfo.textContent = `Showing ${result.from} to ${result.to} of ${result.total} entries`;
-            }
-
-            function renderPagination(result) {
-                if (!paginationWrapper) return;
-
-                if (result.last_page <= 1) {
-                    paginationWrapper.innerHTML = '';
-                    return;
-                }
-
-                const current = result.current_page;
-                const last = result.last_page;
-                let html = `<div class="pagination-group">`;
-
-                html += `
-                <button type="button"
-                    class="page-btn nav-btn"
-                    data-page="${current - 1}"
-                    ${current === 1 ? 'disabled' : ''}>
-                    <i class="bi bi-chevron-left"></i>
-                </button>
-            `;
-
-                function pageButton(page) {
-                    return `
-                    <button type="button"
-                        class="page-btn ${page === current ? 'active' : ''}"
-                        data-page="${page}">
-                        ${page}
-                    </button>
-                `;
-                }
-
-                function dots() {
-                    return `<span class="page-dots">...</span>`;
-                }
-
-                let start = current;
-                let end = current + 2;
-
-                if (end > last) {
-                    end = last;
-                    start = Math.max(1, last - 2);
-                }
-
-                for (let i = start; i <= end; i++) {
-                    html += pageButton(i);
-                }
-
-                if (end < last - 1) {
-                    html += dots();
-                }
-
-                if (end < last) {
-                    html += pageButton(last);
-                }
-
-                html += `
-                <button type="button"
-                    class="page-btn nav-btn"
-                    data-page="${current + 1}"
-                    ${current === last ? 'disabled' : ''}>
-                    <i class="bi bi-chevron-right"></i>
-                </button>
-            `;
-
-                html += `</div>`;
-                paginationWrapper.innerHTML = html;
-
-                paginationWrapper.querySelectorAll('.page-btn[data-page]').forEach(btn => {
-                    btn.addEventListener('click', function() {
-                        if (this.disabled) return;
-                        const page = parseInt(this.dataset.page);
-                        if (!isNaN(page)) {
-                            loadUsers(page, currentSearch);
-                        }
-                    });
-                });
-            }
-
-            function buildFetchUrl(page = 1, search = '') {
-                const url = new URL(fetchUrl, window.location.origin);
-                url.searchParams.set('page', page);
-
-                if (search) {
-                    url.searchParams.set('search', search);
-                }
-
-                return url.toString();
+                applyResponsiveLabels();
             }
 
             function loadUsers(page = 1, search = '') {
                 currentPage = page;
                 currentSearch = search;
 
-                fetch(buildFetchUrl(page, search), {
+                const url = new URL(fetchUrl, window.location.origin);
+                url.searchParams.set('page', page);
+                if (search) url.searchParams.set('search', search);
+
+                fetch(url.toString(), {
                         method: 'GET',
                         headers: {
                             'Accept': 'application/json',
@@ -240,27 +133,21 @@
                     })
                     .then(result => {
                         renderRows(result.data || [], result.current_page, result.per_page);
-                        applyResponsiveLabels();
-                        updateTableInfo(result);
-                        renderPagination(result);
+                        renderPagination(result, 'paginationWrapper', 'tableInfo', page => loadUsers(page, currentSearch));
                     })
                     .catch(error => {
                         tableBody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-danger">Failed to load users.</td></tr>';
-                        if (tableInfo) tableInfo.textContent = 'Failed to load data.';
-                        if (paginationWrapper) paginationWrapper.innerHTML = '';
+                        renderPagination({}, 'paginationWrapper', 'tableInfo');
                         console.error(error);
                     });
             }
 
             if (tableSearch) {
+                let searchTimeout;
                 tableSearch.addEventListener('input', function() {
                     const keyword = this.value.trim();
-
-                    if (window.userSearchTimeout) {
-                        clearTimeout(window.userSearchTimeout);
-                    }
-
-                    window.userSearchTimeout = setTimeout(() => {
+                    clearTimeout(searchTimeout);
+                    searchTimeout = setTimeout(() => {
                         loadUsers(1, keyword);
                     }, 300);
                 });

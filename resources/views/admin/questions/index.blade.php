@@ -81,20 +81,15 @@
             const fetchUrl = @json(route('questions.fetch'));
             const destroyUrl = @json(url('/questions'));
             const editUrl = @json(url('/questions'));
+            const religionsUrl = @json(route('religions.fetch'));
 
             const tableBody = document.getElementById('questionTableBody');
             const table = document.getElementById('dataTable');
-            const tableInfo = document.getElementById('tableInfo');
-            const paginationWrapper = document.getElementById('paginationWrapper');
-
             const religionFilter = document.getElementById('religionFilter');
             const timeSlotFilter = document.getElementById('timeSlotFilter');
             const statusFilter = document.getElementById('statusFilter');
 
-            let allQuestions = [];
-            let filteredQuestions = [];
             let currentPage = 1;
-            const perPage = 10;
 
             function getCsrfToken() {
                 const meta = document.querySelector('meta[name="csrf-token"]');
@@ -154,119 +149,62 @@
                 });
             }
 
+            function populateReligionsFilter() {
+                fetch(`${religionsUrl}?per_page=100`, {
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                .then(res => res.json())
+                .then(result => {
+                    const religions = result.data || [];
+                    religionFilter.innerHTML = '<option value="">All Religions</option>' +
+                        religions.map(r => `<option value="${r.id}">${escapeHtml(r.name)}</option>`).join('');
+                })
+                .catch(err => console.error(err));
+            }
+
             function buildFetchUrl(page = 1) {
                 const url = new URL(fetchUrl, window.location.origin);
                 url.searchParams.set('page', page);
+
+                if (religionFilter && religionFilter.value) {
+                    url.searchParams.set('religion_id', religionFilter.value);
+                }
+                if (timeSlotFilter && timeSlotFilter.value) {
+                    url.searchParams.set('time_slot_id', timeSlotFilter.value);
+                }
+                if (statusFilter && statusFilter.value !== '') {
+                    url.searchParams.set('status', statusFilter.value);
+                }
+
                 return url.toString();
             }
 
-            async function fetchPage(page) {
-                const response = await fetch(buildFetchUrl(page), {
-                    method: 'GET',
-                    headers: {
-                        'Accept': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest',
-                    },
-                });
-
-                const data = await response.json();
-                if (!response.ok) throw data;
-                return data;
-            }
-
-            async function loadAllQuestions() {
-                tableBody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">Loading questions...</td></tr>';
-
-                try {
-                    const firstPage = await fetchPage(1);
-                    let collected = [...(firstPage.data || [])];
-                    const lastPage = firstPage.last_page || 1;
-
-                    for (let page = 2; page <= lastPage; page++) {
-                        const nextPage = await fetchPage(page);
-                        collected = collected.concat(nextPage.data || []);
-                    }
-
-                    allQuestions = collected;
-                    filteredQuestions = [...allQuestions];
-
-                    populateFilters(allQuestions);
-                    renderClientPage(1);
-                } catch (error) {
-                    tableBody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-danger">Failed to load questions.</td></tr>';
-                    if (tableInfo) tableInfo.textContent = 'Failed to load data.';
-                    if (paginationWrapper) paginationWrapper.innerHTML = '';
-                    showToast('Could not load questions. Please refresh the page.', 'error');
-                    console.error(error);
-                }
-            }
-
-            function populateFilters(questions) {
-                const religionValues = [...new Set(
-                    questions
-                    .map(item => item.religion?.name)
-                    .filter(Boolean)
-                )].sort();
-
-                const timeSlotValues = [...new Set(
-                    questions
-                    .map(item => item.time_slot?.name || item.time_slot?.title)
-                    .filter(Boolean)
-                )].sort();
-
-                religionFilter.innerHTML = '<option value="">All Religions</option>' +
-                    religionValues.map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('');
-
-                timeSlotFilter.innerHTML = '<option value="">All Time Slots</option>' +
-                    timeSlotValues.map(name => `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`).join('');
-            }
-
-            function applyFilters() {
-                const selectedReligion = religionFilter.value;
-                const selectedTimeSlot = timeSlotFilter.value;
-                const selectedStatus = statusFilter.value;
-
-                filteredQuestions = allQuestions.filter(item => {
-                    const religionName = item.religion?.name || '';
-                    const timeSlotName = item.time_slot?.name || item.time_slot?.title || '';
-                    const statusValue = String(Number(!!item.status));
-
-                    const religionMatch = !selectedReligion || religionName === selectedReligion;
-                    const timeSlotMatch = !selectedTimeSlot || timeSlotName === selectedTimeSlot;
-                    const statusMatch = selectedStatus === '' || statusValue === selectedStatus;
-
-                    return religionMatch && timeSlotMatch && statusMatch;
-                });
-
-                renderClientPage(1);
-            }
-
-            function renderRows(questions, page = 1) {
+            function renderRows(questions, page = 1, perPage = 10) {
                 if (!questions.length) {
                     tableBody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">No questions found.</td></tr>';
                     return;
                 }
 
                 tableBody.innerHTML = questions.map((item, index) => `
-            <tr data-id="${item.id}">
-                <td>${((page - 1) * perPage) + index + 1}</td>
-                <td>${escapeHtml(item.religion?.name || '-')}</td>
-                <td>${escapeHtml(item.time_slot?.name || item.time_slot?.title || ('Time Slot #' + item.time_slot_id))}</td>
-                <td>${escapeHtml(truncateText(item.question, 80))}</td>
-                <td>${getStatusBadge(item.status)}</td>
-                <td>${formatDate(item.created_at)}</td>
-                <td>
-                    <div class="table-actions">
-                        <a href="${editUrl}/${item.id}/edit" class="btn-action edit" title="Edit">
-                            <i class="bi bi-pencil"></i>
-                        </a>
-                        <button type="button" class="btn-action delete" title="Delete" data-id="${item.id}">
-                            <i class="bi bi-trash"></i>
-                        </button>
-                    </div>
-                </td>
-            </tr>
-        `).join('');
+                    <tr data-id="${item.id}">
+                        <td>${((page - 1) * perPage) + index + 1}</td>
+                        <td>${escapeHtml(item.religion?.name || '-')}</td>
+                        <td>${escapeHtml(item.time_slot?.name || item.time_slot?.title || ('Time Slot #' + item.time_slot_id))}</td>
+                        <td>${escapeHtml(truncateText(item.question, 80))}</td>
+                        <td>${getStatusBadge(item.status)}</td>
+                        <td>${formatDate(item.created_at)}</td>
+                        <td>
+                            <div class="table-actions">
+                                <a href="${editUrl}/${item.id}/edit" class="btn-action edit" title="Edit">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <button type="button" class="btn-action delete" title="Delete" data-id="${item.id}">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('');
 
                 tableBody.querySelectorAll('.btn-action.delete').forEach(btn => {
                     btn.addEventListener('click', function() {
@@ -277,97 +215,32 @@
                 applyResponsiveLabels();
             }
 
-            function updateTableInfo(total, pageRows, page) {
-                if (!total || pageRows.length === 0) {
-                    tableInfo.textContent = 'No questions found.';
-                    return;
-                }
-
-                const from = ((page - 1) * perPage) + 1;
-                const to = from + pageRows.length - 1;
-                tableInfo.textContent = `Showing ${from} to ${to} of ${total} entries`;
-            }
-
-            function renderPagination(totalItems, current) {
-                const last = Math.ceil(totalItems / perPage);
-
-                if (last <= 1) {
-                    paginationWrapper.innerHTML = '';
-                    return;
-                }
-
-                let html = `<div class="pagination-group">`;
-
-                html += `
-            <button type="button"
-                class="page-btn nav-btn"
-                data-page="${current - 1}"
-                ${current === 1 ? 'disabled' : ''}>
-                <i class="bi bi-chevron-left"></i>
-            </button>
-        `;
-
-                function pageButton(page) {
-                    return `
-                <button type="button"
-                    class="page-btn ${page === current ? 'active' : ''}"
-                    data-page="${page}">
-                    ${page}
-                </button>
-            `;
-                }
-
-                function dots() {
-                    return `<span class="page-dots">...</span>`;
-                }
-
-                let start = Math.max(1, current - 1);
-                let end = Math.min(last, current + 1);
-
-                if (start > 1) html += pageButton(1);
-                if (start > 2) html += dots();
-
-                for (let i = start; i <= end; i++) {
-                    html += pageButton(i);
-                }
-
-                if (end < last - 1) html += dots();
-                if (end < last) html += pageButton(last);
-
-                html += `
-            <button type="button"
-                class="page-btn nav-btn"
-                data-page="${current + 1}"
-                ${current === last ? 'disabled' : ''}>
-                <i class="bi bi-chevron-right"></i>
-            </button>
-        `;
-
-                html += `</div>`;
-
-                paginationWrapper.innerHTML = html;
-
-                paginationWrapper.querySelectorAll('.page-btn[data-page]').forEach(btn => {
-                    btn.addEventListener('click', function() {
-                        if (this.disabled) return;
-                        const page = parseInt(this.dataset.page);
-                        if (!isNaN(page)) {
-                            renderClientPage(page);
-                        }
-                    });
-                });
-            }
-
-            function renderClientPage(page = 1) {
+            function loadQuestions(page = 1) {
                 currentPage = page;
+                tableBody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-muted">Loading questions...</td></tr>';
 
-                const start = (page - 1) * perPage;
-                const end = start + perPage;
-                const pageRows = filteredQuestions.slice(start, end);
-
-                renderRows(pageRows, page);
-                updateTableInfo(filteredQuestions.length, pageRows, page);
-                renderPagination(filteredQuestions.length, page);
+                fetch(buildFetchUrl(page), {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                })
+                .then(async response => {
+                    const data = await response.json();
+                    if (!response.ok) throw data;
+                    return data;
+                })
+                .then(result => {
+                    renderRows(result.data || [], result.current_page, result.per_page);
+                    renderPagination(result, 'paginationWrapper', 'tableInfo', page => loadQuestions(page));
+                })
+                .catch(error => {
+                    tableBody.innerHTML = '<tr><td colspan="7" class="text-center py-4 text-danger">Failed to load questions.</td></tr>';
+                    renderPagination({}, 'paginationWrapper', 'tableInfo');
+                    showToast('Could not load questions.', 'error');
+                    console.error(error);
+                });
             }
 
             function deleteQuestion(id, btn) {
@@ -401,33 +274,22 @@
                         })
                         .then(result => {
                             showToast(result.message || 'Question deleted successfully.', 'success');
-
-                            allQuestions = allQuestions.filter(item => item.id != id);
-                            applyFilters();
+                            loadQuestions(currentPage);
                         })
                         .catch(error => {
                             btn.disabled = false;
-                            const message = error?.message ||
-                                (error?.errors && Object.values(error.errors).flat().join(' ')) ||
-                                'Failed to delete question.';
+                            const message = error?.message || 'Failed to delete question.';
                             showToast(message, 'error');
                         });
                 });
             }
 
-            if (religionFilter) {
-                religionFilter.addEventListener('change', applyFilters);
-            }
+            if (religionFilter) religionFilter.addEventListener('change', () => loadQuestions(1));
+            if (timeSlotFilter) timeSlotFilter.addEventListener('change', () => loadQuestions(1));
+            if (statusFilter) statusFilter.addEventListener('change', () => loadQuestions(1));
 
-            if (timeSlotFilter) {
-                timeSlotFilter.addEventListener('change', applyFilters);
-            }
-
-            if (statusFilter) {
-                statusFilter.addEventListener('change', applyFilters);
-            }
-
-            loadAllQuestions();
+            populateReligionsFilter();
+            loadQuestions(1);
         });
     </script>
 @endpush

@@ -30,13 +30,30 @@ class QuestionsController extends Controller
         return view('admin.questions.edit', compact('id'));
     }
 
-    public function fetch(): JsonResponse
+    public function fetch(Request $request): JsonResponse
     {
-        $questions = Question::with(['religion', 'timeSlot'])
-            ->orderByDesc('id')
-            ->paginate(10);
+        $query = Question::with(['religion', 'timeSlot'])->orderByDesc('id');
 
-        return response()->json($questions);
+        if ($request->filled('religion_id')) {
+            $query->where('religion_id', $request->religion_id);
+        }
+
+        if ($request->filled('time_slot_id')) {
+            $query->where('time_slot_id', $request->time_slot_id);
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where('question', 'like', "%{$search}%");
+        }
+
+        $perPage = (int) $request->input('per_page', 10);
+
+        return response()->json($query->paginate($perPage));
     }
 
     public function store(Request $request): JsonResponse

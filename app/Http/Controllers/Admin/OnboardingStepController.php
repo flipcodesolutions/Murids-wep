@@ -33,13 +33,22 @@ class OnboardingStepController extends Controller
         return view('admin.onboarding.edit', compact('religions', 'onboardingStep'));
     }
 
-    public function fetch(): JsonResponse
+    public function fetch(Request $request): JsonResponse
     {
-        $onboardingSteps = OnboardingStep::with(['religion'])
-            ->orderByDesc('id')
-            ->paginate(10);
+        $query = OnboardingStep::with(['religion'])->orderByDesc('id');
 
-        return response()->json($onboardingSteps);
+        if ($request->filled('religion_id')) {
+            $query->where('religion_id', $request->religion_id);
+        }
+
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where('question', 'like', "%{$search}%");
+        }
+
+        $perPage = (int) $request->input('per_page', 10);
+
+        return response()->json($query->paginate($perPage));
     }
 
     public function store(Request $request): JsonResponse

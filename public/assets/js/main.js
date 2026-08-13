@@ -163,3 +163,77 @@ function confirmDelete(btn) {
         }
     }
 }
+
+/* ---- Global Pagination Helper ---- */
+function renderPagination(data, wrapperId, infoId, onPageChange) {
+    const wrapper = typeof wrapperId === "string" ? document.getElementById(wrapperId) : wrapperId;
+    const info = typeof infoId === "string" ? document.getElementById(infoId) : infoId;
+
+    if (!data || !data.total || data.total === 0) {
+        if (info) info.textContent = "No records found.";
+        if (wrapper) wrapper.innerHTML = "";
+        return;
+    }
+
+    if (info) {
+        info.textContent = `Showing ${data.from} to ${data.to} of ${data.total} entries`;
+    }
+
+    // Only render pagination buttons when needed (last_page > 1)
+    if (!wrapper) return;
+    if (data.last_page <= 1) {
+        wrapper.innerHTML = "";
+        return;
+    }
+
+    const current = data.current_page;
+    const last = data.last_page;
+
+    let html = `<div class="pagination-group">`;
+
+    // Previous Page Button
+    html += `
+        <button type="button" class="page-btn nav-btn" data-page="${current - 1}" ${current === 1 ? "disabled" : ""}>
+            <i class="bi bi-chevron-left"></i>
+        </button>
+    `;
+
+    // Page Numbers
+    let start = Math.max(1, current - 2);
+    let end = Math.min(last, current + 2);
+
+    if (start > 1) {
+        html += `<button type="button" class="page-btn" data-page="1">1</button>`;
+        if (start > 2) html += `<span class="page-dots">...</span>`;
+    }
+
+    for (let page = start; page <= end; page++) {
+        html += `<button type="button" class="page-btn ${page === current ? "active" : ""}" data-page="${page}">${page}</button>`;
+    }
+
+    if (end < last) {
+        if (end < last - 1) html += `<span class="page-dots">...</span>`;
+        html += `<button type="button" class="page-btn" data-page="${last}">${last}</button>`;
+    }
+
+    // Next Page Button
+    html += `
+        <button type="button" class="page-btn nav-btn" data-page="${current + 1}" ${current === last ? "disabled" : ""}>
+            <i class="bi bi-chevron-right"></i>
+        </button>
+    `;
+
+    html += `</div>`;
+    wrapper.innerHTML = html;
+
+    wrapper.querySelectorAll(".page-btn[data-page]").forEach((btn) => {
+        btn.addEventListener("click", function () {
+            if (this.disabled || this.classList.contains("active")) return;
+            const page = parseInt(this.dataset.page, 10);
+            if (!isNaN(page) && typeof onPageChange === "function") {
+                onPageChange(page);
+            }
+        });
+    });
+}
+
