@@ -328,6 +328,7 @@ return [
          */
         'constants' => [
             'L5_SWAGGER_CONST_HOST' => env('L5_SWAGGER_CONST_HOST', 'http://127.0.0.1:8000'),
+            'L5_SWAGGER_CONST_HOST_PROD' => env('L5_SWAGGER_CONST_HOST_PROD', 'https://frameworkcommunication.com/murids/public'),
         ],
     ],
 ];

@@ -8,7 +8,11 @@
     "servers": [
         {
             "url": "http://127.0.0.1:8000",
-            "description": "Murids API Server"
+            "description": "Local Development Server"
+        },
+        {
+            "url": "https://frameworkcommunication.com/murids/public",
+            "description": "Production Server"
         }
     ],
     "paths": {
@@ -289,19 +293,13 @@
                         "application/json": {
                             "schema": {
                                 "required": [
-                                    "email",
-                                    "password"
+                                    "email"
                                 ],
                                 "properties": {
                                     "email": {
                                         "type": "string",
                                         "format": "email",
-                                        "example": "john@example.com"
-                                    },
-                                    "password": {
-                                        "type": "string",
-                                        "format": "password",
-                                        "example": "secret123"
+                                        "example": "[EMAIL_ADDRESS]"
                                     }
                                 },
                                 "type": "object"

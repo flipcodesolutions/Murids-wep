@@ -11,7 +11,11 @@ use OpenApi\Attributes as OA;
 )]
 #[OA\Server(
     url: L5_SWAGGER_CONST_HOST,
-    description: "Murids API Server"
+    description: "Local Development Server"
+)]
+#[OA\Server(
+    url: L5_SWAGGER_CONST_HOST_PROD,
+    description: "Production Server"
 )]
 abstract class Controller
 {

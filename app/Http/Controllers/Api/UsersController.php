@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\UserProfile;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -52,7 +53,10 @@ class UsersController extends Controller
     )]
     public function show($id): JsonResponse
     {
-        $user = User::findOrFail($id);
+        $user = User::with('profile')->findOrFail($id);
+        if (!$user->profile) {
+            $user->setRelation('profile', []);
+        }
 
         return response()->json([
             'success' => true,
@@ -118,10 +122,9 @@ class UsersController extends Controller
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(
-                required: ["email", "password"],
+                required: ["email"],
                 properties: [
-                    new OA\Property(property: "email", type: "string", format: "email", example: "john@example.com"),
-                    new OA\Property(property: "password", type: "string", format: "password", example: "secret123")
+                    new OA\Property(property: "email", type: "string", format: "email", example: "[EMAIL_ADDRESS]"),
                 ]
             )
         ),
@@ -134,22 +137,49 @@ class UsersController extends Controller
     {
         $request->validate([
             'email' => 'required|email',
-            'password' => 'required|string',
         ]);
+        $user = User::firstOrCreate(
+            ['email' => $request->email],
+            [
+                'name' => $request->name ?? explode('@', $request->email)[0],
+                'provider' => $request->provider ?? 'google',
+                'user_type' => $request->user_type ?? 'user',
+            ]
+        );
+        Auth::login($user);
+        $token = $user->createToken('auth_token')->plainTextToken;
+        $profileFields = $request->only(['religion_id','notification_enabled','device_token','timezone']);
 
-        $user = User::where('email', $request->email)->first();
-
-        if (!$user || !Hash::check($request->password, $user->password)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Invalid email or password.',
-            ], 401);
+        if ($request->has('profile') && is_array($request->profile)) {
+            $profileFields = array_merge(
+                $profileFields,
+                $request->profile
+            );
         }
 
+        $profileData = array_filter($profileFields,fn($value) => !is_null($value));
+
+        if (!empty($profileData)) {
+            UserProfile::updateOrCreate(
+                ['user_id' => $user->id],
+                $profileData
+            );
+        }
+        $user->load('profile');
+        $profileEmpty = !$user->profile;
+
+        if ($profileEmpty) {
+            $user->setRelation('profile', []);
+        }
         return response()->json([
             'success' => true,
             'message' => 'Login successful.',
+            'profile_empty' => $profileEmpty,
+            'profile_message' => $profileEmpty
+                ? 'User profile is empty. Please update your profile.'
+                : 'User profile loaded successfully.',
             'data' => $user,
+            'token' => $token,
         ], 200);
     }
 
@@ -165,7 +195,7 @@ class UsersController extends Controller
     )]
     public function redirectToGoogle()
     {
-        return Socialite::driver('google')->stateless()->redirect();
+        return Socialite::driver('google')->redirect();
     }
 
     #[OA\Get(
@@ -179,10 +209,21 @@ class UsersController extends Controller
             new OA\Response(response: 422, description: "Authentication failed")
         ]
     )]
-    public function handleGoogleCallback(): JsonResponse
+    public function handleGoogleCallback(Request $request): JsonResponse
     {
         try {
-            $googleUser = Socialite::driver('google')->stateless()->user();
+            if (!$request->has('code') && !$request->has('access_token')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Authorization code or access_token is missing from the request. Ensure Google redirects with ?code= or pass access_token parameter.',
+                ], 400);
+            }
+
+            if ($request->has('access_token')) {
+                $googleUser = Socialite::driver('google')->userFromToken($request->input('access_token'));
+            } else {
+                $googleUser = Socialite::driver('google')->stateless()->user();
+            }
 
             $user = User::where('provider', 'google')
                 ->where('provider_id', $googleUser->getId())
@@ -209,11 +250,15 @@ class UsersController extends Controller
             }
 
             Auth::login($user);
+            $user = $user->fresh();
+            $token = $user->createToken('auth_token')->plainTextToken;
+            $user->token = $token;
 
             return response()->json([
                 'success' => true,
                 'message' => 'Google authentication successful.',
                 'data' => $user,
+                'token' => $token,
             ], 200);
         } catch (\Exception $e) {
             return response()->json([
@@ -250,10 +295,21 @@ class UsersController extends Controller
             new OA\Response(response: 422, description: "Authentication failed")
         ]
     )]
-    public function handleAppleCallback(): JsonResponse
+    public function handleAppleCallback(Request $request): JsonResponse
     {
         try {
-            $appleUser = Socialite::driver('apple')->stateless()->user();
+            if (!$request->has('code') && !$request->has('access_token')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Authorization code or access_token is missing from the request. Ensure Apple redirects with ?code= or pass access_token parameter.',
+                ], 400);
+            }
+
+            if ($request->has('access_token')) {
+                $appleUser = Socialite::driver('apple')->userFromToken($request->input('access_token'));
+            } else {
+                $appleUser = Socialite::driver('apple')->stateless()->user();
+            }
 
             $user = User::where('provider', 'apple')
                 ->where('provider_id', $appleUser->getId())
@@ -280,11 +336,15 @@ class UsersController extends Controller
             }
 
             Auth::login($user);
+            $user = $user->fresh();
+            $token = $user->createToken('auth_token')->plainTextToken;
+            $user->token = $token;
 
             return response()->json([
                 'success' => true,
                 'message' => 'Apple authentication successful.',
                 'data' => $user,
+                'token' => $token,
             ], 200);
         } catch (\Exception $e) {
             return response()->json([
