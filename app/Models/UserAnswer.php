@@ -19,7 +19,7 @@ class UserAnswer extends Model
     protected function casts(): array
     {
         return [
-            'answer' => 'boolean',
+            'answer' => 'integer',
             'answered_at' => 'datetime',
         ];
     }

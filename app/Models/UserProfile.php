@@ -13,6 +13,8 @@ class UserProfile extends Model
         'notification_enabled',
         'device_token',
         'timezone',
+        'date_of_birth',
+        'gender'
     ];
 
     protected function casts(): array

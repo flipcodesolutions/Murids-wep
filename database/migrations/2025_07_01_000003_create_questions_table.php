@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('questions', function (Blueprint $table) {
             $table->id();
             $table->foreignId('religion_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('time_slot_id')->constrained()->cascadeOnDelete();
+            $table->unsignedBigInteger('time_slot_id')->nullable();
             $table->text('question');
             $table->boolean('status')->default(true);
             $table->timestamps();

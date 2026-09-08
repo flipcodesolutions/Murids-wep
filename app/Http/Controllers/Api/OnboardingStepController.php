@@ -32,7 +32,7 @@ class OnboardingStepController extends Controller
     )]
     public function index(Request $request): JsonResponse
     {
-        $query = OnboardingStep::with('religion')
+        $query = OnboardingStep::select('id', 'religion_id', 'question', 'options')
             ->whereHas('religion', function ($q) {
                 $q->where('status', 1);
             });

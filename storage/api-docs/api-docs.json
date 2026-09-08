@@ -42,6 +42,32 @@
                 }
             }
         },
+        "/api/religions": {
+            "get": {
+                "tags": [
+                    "Religions"
+                ],
+                "summary": "Get list of religions",
+                "description": "Returns list of all religions",
+                "operationId": "getReligionsList",
+                "parameters": [
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Filter by status (1 for active, 0 for inactive)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful operation"
+                    }
+                }
+            }
+        },
         "/api/users": {
             "get": {
                 "tags": [
@@ -331,63 +357,16 @@
                     }
                 }
             }
-        },
-        "/api/google/callback": {
-            "get": {
-                "tags": [
-                    "Users"
-                ],
-                "summary": "Google OAuth Callback Redirect URL",
-                "description": "Google OAuth redirect callback endpoint handling user creation/login",
-                "operationId": "handleGoogleCallback",
-                "responses": {
-                    "200": {
-                        "description": "Google authentication successful"
-                    },
-                    "422": {
-                        "description": "Authentication failed"
-                    }
-                }
-            }
-        },
-        "/api/apple/redirect": {
-            "get": {
-                "tags": [
-                    "Users"
-                ],
-                "summary": "Redirect to Apple OAuth Login",
-                "description": "Redirects the client to Apple's authentication page",
-                "operationId": "redirectToApple",
-                "responses": {
-                    "302": {
-                        "description": "Redirect to Apple OAuth"
-                    }
-                }
-            }
-        },
-        "/api/apple/callback": {
-            "get": {
-                "tags": [
-                    "Users"
-                ],
-                "summary": "Apple OAuth Callback Redirect URL",
-                "description": "Apple OAuth redirect callback endpoint handling user creation/login",
-                "operationId": "handleAppleCallback",
-                "responses": {
-                    "200": {
-                        "description": "Apple authentication successful"
-                    },
-                    "422": {
-                        "description": "Authentication failed"
-                    }
-                }
-            }
         }
     },
     "tags": [
         {
             "name": "Onboarding Steps",
             "description": "API Endpoints for Onboarding Steps"
+        },
+        {
+            "name": "Religions",
+            "description": "API Endpoints for Religions"
         },
         {
             "name": "Users",

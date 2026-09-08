@@ -3,11 +3,16 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\OnboardingStep;
+use App\Models\Question;
+use App\Models\TimeSlot;
 use App\Models\User;
+use App\Models\UserAnswer;
 use App\Models\UserProfile;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Laravel\Socialite\Facades\Socialite;
@@ -138,17 +143,32 @@ class UsersController extends Controller
         $request->validate([
             'email' => 'required|email',
         ]);
+
         $user = User::firstOrCreate(
             ['email' => $request->email],
             [
                 'name' => $request->name ?? explode('@', $request->email)[0],
                 'provider' => $request->provider ?? 'google',
+                'provider_id' => $request->provider_id ?? null,
                 'user_type' => $request->user_type ?? 'user',
+                'email_verified_at' => now(),
             ]
         );
+
+        $userUpdates = array_filter([
+            'name' => $request->name,
+            'provider' => $request->provider,
+            'provider_id' => $request->provider_id,
+        ], fn($val) => !is_null($val));
+
+        if (!empty($userUpdates)) {
+            $user->update($userUpdates);
+        }
+
         Auth::login($user);
         $token = $user->createToken('auth_token')->plainTextToken;
-        $profileFields = $request->only(['religion_id','notification_enabled','device_token','timezone']);
+
+        $profileFields = $request->only(['religion_id', 'notification_enabled', 'device_token', 'timezone']);
 
         if ($request->has('profile') && is_array($request->profile)) {
             $profileFields = array_merge(
@@ -157,7 +177,7 @@ class UsersController extends Controller
             );
         }
 
-        $profileData = array_filter($profileFields,fn($value) => !is_null($value));
+        $profileData = array_filter($profileFields, fn($value) => !is_null($value));
 
         if (!empty($profileData)) {
             UserProfile::updateOrCreate(
@@ -165,12 +185,97 @@ class UsersController extends Controller
                 $profileData
             );
         }
+
         $user->load('profile');
         $profileEmpty = !$user->profile;
 
         if ($profileEmpty) {
             $user->setRelation('profile', []);
         }
+
+        // Store question answer(s) if provided in login request
+        $answersToProcess = [];
+        if ($request->has('answers') && is_array($request->answers)) {
+            $answersToProcess = $request->answers;
+        } elseif ($request->has('question_id') && $request->question_id !== null && $request->question_id !== '') {
+            $answersToProcess[] = [
+                'question_id' => $request->question_id,
+                'religion_id' => $request->religion_id,
+                'time_slot_id' => $request->time_slot_id,
+                'answer' => $request->answer,
+            ];
+        }
+
+        foreach ($answersToProcess as $ans) {
+            if (isset($ans['question_id']) && $ans['question_id'] !== null && $ans['question_id'] !== '') {
+                try {
+                    $qId = (int) $ans['question_id'];
+                    $rId = $ans['religion_id'] ?? $user->profile?->religion_id ?? 1;
+                    $tId = $ans['time_slot_id'] ?? null;
+
+                    if (!Question::where('id', $qId)->exists()) {
+                        $onboardingStep = OnboardingStep::find($qId);
+                        DB::table('questions')->insertOrIgnore([
+                            'id' => $qId,
+                            'religion_id' => $onboardingStep->religion_id ?? $rId,
+                            'time_slot_id' => $tId,
+                            'question' => $onboardingStep->question ?? ('Onboarding Question ' . $qId),
+                            'status' => 1
+                            
+                        ]);
+                    }
+
+                    $rawAnswer = $ans['answer'] ?? null;
+                    if (is_null($rawAnswer)) {
+                        $answerVal = null;
+                    } elseif (is_string($rawAnswer)) {
+                        $strLower = strtolower(trim($rawAnswer));
+                        $answerVal = in_array($strLower, ['yes', 'true', '1'], true) ? 1 : (in_array($strLower, ['no', 'false', '0'], true) ? 0 : (int)$rawAnswer);
+                    } else {
+                        $answerVal = (int) $rawAnswer;
+                    }
+
+                    UserAnswer::updateOrCreate(
+                        [
+                            'user_id' => $user->id,
+                            'question_id' => $qId,
+                        ],
+                        [
+                            'religion_id' => $rId,
+                            'time_slot_id' => null,
+                            'answer' => $answerVal,
+                            'answered_at' => now(),
+                        ]
+                    );
+                } catch (\Throwable $e) {
+                    \Log::error('UserAnswer save error: ' . $e->getMessage());
+                }
+            }
+        }
+
+        $religionId = $user->profile?->religion_id 
+            ?? $request->religion_id 
+            ?? ($request->profile['religion_id'] ?? null)
+            ?? ($request->answers[0]['religion_id'] ?? null);
+
+        $onboardingSteps = OnboardingStep::query()
+            ->when($religionId, function ($q) use ($religionId) {
+                $q->where('religion_id', $religionId);
+            })
+            ->orderBy('id', 'asc')
+            ->get();
+
+        $userAnswers = UserAnswer::where('user_id', $user->id)
+            ->get()
+            ->keyBy('question_id');
+
+        $onboardingSteps->transform(function ($step) use ($userAnswers) {
+            $userAnswer = $userAnswers->get($step->id);
+            $step->is_answered = !is_null($userAnswer);
+            $step->user_answer = $userAnswer ? $userAnswer->answer : null;
+            return $step;
+        });
+
         return response()->json([
             'success' => true,
             'message' => 'Login successful.',
@@ -180,6 +285,7 @@ class UsersController extends Controller
                 : 'User profile loaded successfully.',
             'data' => $user,
             'token' => $token,
+            'onboarding_steps' => $onboardingSteps,
         ], 200);
     }
 
@@ -198,162 +304,162 @@ class UsersController extends Controller
         return Socialite::driver('google')->redirect();
     }
 
-    #[OA\Get(
-        path: "/api/google/callback",
-        summary: "Google OAuth Callback Redirect URL",
-        description: "Google OAuth redirect callback endpoint handling user creation/login",
-        operationId: "handleGoogleCallback",
-        tags: ["Users"],
-        responses: [
-            new OA\Response(response: 200, description: "Google authentication successful"),
-            new OA\Response(response: 422, description: "Authentication failed")
-        ]
-    )]
-    public function handleGoogleCallback(Request $request): JsonResponse
-    {
-        try {
-            if (!$request->has('code') && !$request->has('access_token')) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Authorization code or access_token is missing from the request. Ensure Google redirects with ?code= or pass access_token parameter.',
-                ], 400);
-            }
+    // #[OA\Get(
+    //     path: "/api/google/callback",
+    //     summary: "Google OAuth Callback Redirect URL",
+    //     description: "Google OAuth redirect callback endpoint handling user creation/login",
+    //     operationId: "handleGoogleCallback",
+    //     tags: ["Users"],
+    //     responses: [
+    //         new OA\Response(response: 200, description: "Google authentication successful"),
+    //         new OA\Response(response: 422, description: "Authentication failed")
+    //     ]
+    // )]
+    // public function handleGoogleCallback(Request $request): JsonResponse
+    // {
+    //     try {
+    //         if (!$request->has('code') && !$request->has('access_token')) {
+    //             return response()->json([
+    //                 'success' => false,
+    //                 'message' => 'Authorization code or access_token is missing from the request. Ensure Google redirects with ?code= or pass access_token parameter.',
+    //             ], 400);
+    //         }
 
-            if ($request->has('access_token')) {
-                $googleUser = Socialite::driver('google')->userFromToken($request->input('access_token'));
-            } else {
-                $googleUser = Socialite::driver('google')->stateless()->user();
-            }
+    //         if ($request->has('access_token')) {
+    //             $googleUser = Socialite::driver('google')->userFromToken($request->input('access_token'));
+    //         } else {
+    //             $googleUser = Socialite::driver('google')->stateless()->user();
+    //         }
 
-            $user = User::where('provider', 'google')
-                ->where('provider_id', $googleUser->getId())
-                ->first();
+    //         $user = User::where('provider', 'google')
+    //             ->where('provider_id', $googleUser->getId())
+    //             ->first();
 
-            if (!$user) {
-                $user = User::where('email', $googleUser->getEmail())->first();
+    //         if (!$user) {
+    //             $user = User::where('email', $googleUser->getEmail())->first();
 
-                if ($user) {
-                    $user->update([
-                        'provider' => 'google',
-                        'provider_id' => $googleUser->getId(),
-                    ]);
-                } else {
-                    $user = User::create([
-                        'name' => $googleUser->getName() ?? $googleUser->getNickname() ?? explode('@', $googleUser->getEmail())[0],
-                        'email' => $googleUser->getEmail(),
-                        'provider' => 'google',
-                        'provider_id' => $googleUser->getId(),
-                        'user_type' => 'user',
-                        'password' => null,
-                    ]);
-                }
-            }
+    //             if ($user) {
+    //                 $user->update([
+    //                     'provider' => 'google',
+    //                     'provider_id' => $googleUser->getId(),
+    //                 ]);
+    //             } else {
+    //                 $user = User::create([
+    //                     'name' => $googleUser->getName() ?? $googleUser->getNickname() ?? explode('@', $googleUser->getEmail())[0],
+    //                     'email' => $googleUser->getEmail(),
+    //                     'provider' => 'google',
+    //                     'provider_id' => $googleUser->getId(),
+    //                     'user_type' => 'user',
+    //                     'password' => null,
+    //                 ]);
+    //             }
+    //         }
 
-            Auth::login($user);
-            $user = $user->fresh();
-            $token = $user->createToken('auth_token')->plainTextToken;
-            $user->token = $token;
+    //         Auth::login($user);
+    //         $user = $user->fresh();
+    //         $token = $user->createToken('auth_token')->plainTextToken;
+    //         $user->token = $token;
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Google authentication successful.',
-                'data' => $user,
-                'token' => $token,
-            ], 200);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Google callback authentication failed.',
-                'error' => $e->getMessage(),
-            ], 422);
-        }
-    }
+    //         return response()->json([
+    //             'success' => true,
+    //             'message' => 'Google authentication successful.',
+    //             'data' => $user,
+    //             'token' => $token,
+    //         ], 200);
+    //     } catch (\Exception $e) {
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Google callback authentication failed.',
+    //             'error' => $e->getMessage(),
+    //         ], 422);
+    //     }
+    // }
 
-    #[OA\Get(
-        path: "/api/apple/redirect",
-        summary: "Redirect to Apple OAuth Login",
-        description: "Redirects the client to Apple's authentication page",
-        operationId: "redirectToApple",
-        tags: ["Users"],
-        responses: [
-            new OA\Response(response: 302, description: "Redirect to Apple OAuth")
-        ]
-    )]
-    public function redirectToApple()
-    {
-        return Socialite::driver('apple')->stateless()->redirect();
-    }
+    // #[OA\Get(
+    //     path: "/api/apple/redirect",
+    //     summary: "Redirect to Apple OAuth Login",
+    //     description: "Redirects the client to Apple's authentication page",
+    //     operationId: "redirectToApple",
+    //     tags: ["Users"],
+    //     responses: [
+    //         new OA\Response(response: 302, description: "Redirect to Apple OAuth")
+    //     ]
+    // )]
+    // public function redirectToApple()
+    // {
+    //     return Socialite::driver('apple')->stateless()->redirect();
+    // }
 
-    #[OA\Get(
-        path: "/api/apple/callback",
-        summary: "Apple OAuth Callback Redirect URL",
-        description: "Apple OAuth redirect callback endpoint handling user creation/login",
-        operationId: "handleAppleCallback",
-        tags: ["Users"],
-        responses: [
-            new OA\Response(response: 200, description: "Apple authentication successful"),
-            new OA\Response(response: 422, description: "Authentication failed")
-        ]
-    )]
-    public function handleAppleCallback(Request $request): JsonResponse
-    {
-        try {
-            if (!$request->has('code') && !$request->has('access_token')) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Authorization code or access_token is missing from the request. Ensure Apple redirects with ?code= or pass access_token parameter.',
-                ], 400);
-            }
+    // #[OA\Get(
+    //     path: "/api/apple/callback",
+    //     summary: "Apple OAuth Callback Redirect URL",
+    //     description: "Apple OAuth redirect callback endpoint handling user creation/login",
+    //     operationId: "handleAppleCallback",
+    //     tags: ["Users"],
+    //     responses: [
+    //         new OA\Response(response: 200, description: "Apple authentication successful"),
+    //         new OA\Response(response: 422, description: "Authentication failed")
+    //     ]
+    // )]
+    // public function handleAppleCallback(Request $request): JsonResponse
+    // {
+    //     try {
+    //         if (!$request->has('code') && !$request->has('access_token')) {
+    //             return response()->json([
+    //                 'success' => false,
+    //                 'message' => 'Authorization code or access_token is missing from the request. Ensure Apple redirects with ?code= or pass access_token parameter.',
+    //             ], 400);
+    //         }
 
-            if ($request->has('access_token')) {
-                $appleUser = Socialite::driver('apple')->userFromToken($request->input('access_token'));
-            } else {
-                $appleUser = Socialite::driver('apple')->stateless()->user();
-            }
+    //         if ($request->has('access_token')) {
+    //             $appleUser = Socialite::driver('apple')->userFromToken($request->input('access_token'));
+    //         } else {
+    //             $appleUser = Socialite::driver('apple')->stateless()->user();
+    //         }
 
-            $user = User::where('provider', 'apple')
-                ->where('provider_id', $appleUser->getId())
-                ->first();
+    //         $user = User::where('provider', 'apple')
+    //             ->where('provider_id', $appleUser->getId())
+    //             ->first();
 
-            if (!$user) {
-                $user = User::where('email', $appleUser->getEmail())->first();
+    //         if (!$user) {
+    //             $user = User::where('email', $appleUser->getEmail())->first();
 
-                if ($user) {
-                    $user->update([
-                        'provider' => 'apple',
-                        'provider_id' => $appleUser->getId(),
-                    ]);
-                } else {
-                    $user = User::create([
-                        'name' => $appleUser->getName() ?? explode('@', $appleUser->getEmail())[0],
-                        'email' => $appleUser->getEmail(),
-                        'provider' => 'apple',
-                        'provider_id' => $appleUser->getId(),
-                        'user_type' => 'user',
-                        'password' => null,
-                    ]);
-                }
-            }
+    //             if ($user) {
+    //                 $user->update([
+    //                     'provider' => 'apple',
+    //                     'provider_id' => $appleUser->getId(),
+    //                 ]);
+    //             } else {
+    //                 $user = User::create([
+    //                     'name' => $appleUser->getName() ?? explode('@', $appleUser->getEmail())[0],
+    //                     'email' => $appleUser->getEmail(),
+    //                     'provider' => 'apple',
+    //                     'provider_id' => $appleUser->getId(),
+    //                     'user_type' => 'user',
+    //                     'password' => null,
+    //                 ]);
+    //             }
+    //         }
 
-            Auth::login($user);
-            $user = $user->fresh();
-            $token = $user->createToken('auth_token')->plainTextToken;
-            $user->token = $token;
+    //         Auth::login($user);
+    //         $user = $user->fresh();
+    //         $token = $user->createToken('auth_token')->plainTextToken;
+    //         $user->token = $token;
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Apple authentication successful.',
-                'data' => $user,
-                'token' => $token,
-            ], 200);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Apple callback authentication failed.',
-                'error' => $e->getMessage(),
-            ], 422);
-        }
-    }
+    //         return response()->json([
+    //             'success' => true,
+    //             'message' => 'Apple authentication successful.',
+    //             'data' => $user,
+    //             'token' => $token,
+    //         ], 200);
+    //     } catch (\Exception $e) {
+    //         return response()->json([
+    //             'success' => false,
+    //             'message' => 'Apple callback authentication failed.',
+    //             'error' => $e->getMessage(),
+    //         ], 422);
+    //     }
+    // }
 
     #[OA\Post(
         path: "/api/users/{id}",
@@ -389,21 +495,99 @@ class UsersController extends Controller
         $user = User::findOrFail($id);
 
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email,' . $user->id,
-            'user_type' => 'required|in:user',
-            'provider' => 'required|in:google,apple,other',
+            'name' => 'nullable|string|max:255',
+            'email' => 'nullable|email|unique:users,email,' . $user->id,
+            'user_type' => 'nullable|in:user,admin',
+            'provider' => 'nullable|in:google,apple,other',
             'provider_id' => 'nullable|string|max:255',
             'password' => 'nullable|string|min:8|confirmed',
         ]);
 
-        if (!empty($validated['password'])) {
-            $validated['password'] = Hash::make($validated['password']);
+        $userData = array_filter($validated, fn($val) => !is_null($val));
+
+        if (!empty($userData['password'])) {
+            $userData['password'] = Hash::make($userData['password']);
         } else {
-            unset($validated['password']);
+            unset($userData['password']);
         }
 
-        $user->update($validated);
+        if (!empty($userData)) {
+            $user->update($userData);
+        }
+
+        $profileFields = $request->only(['religion_id', 'notification_enabled', 'device_token', 'timezone','date_of_birth','gender']);
+        if ($request->has('profile') && is_array($request->profile)) {
+            $profileFields = array_merge($profileFields, $request->profile);
+        }
+        $profileData = array_filter($profileFields, fn($value) => !is_null($value));
+
+        if (!empty($profileData)) {
+            UserProfile::updateOrCreate(
+                ['user_id' => $user->id],
+                $profileData
+            );
+        }
+
+        $answersToProcess = [];
+        if ($request->has('answers') && is_array($request->answers)) {
+            $answersToProcess = $request->answers;
+        } elseif ($request->has('question_id') && $request->question_id !== null && $request->question_id !== '') {
+            $answersToProcess[] = [
+                'question_id' => $request->question_id,
+                'religion_id' => $request->religion_id,
+                'time_slot_id' => $request->time_slot_id,
+                'answer' => $request->answer,
+            ];
+        }
+
+        foreach ($answersToProcess as $ans) {
+            if (isset($ans['question_id']) && $ans['question_id'] !== null && $ans['question_id'] !== '') {
+                try {
+                    $qId = (int) $ans['question_id'];
+                    $rId = $ans['religion_id'] ?? $user->profile?->religion_id ?? 1;
+                    $tId = $ans['time_slot_id'] ?? null;
+
+                    if (!Question::where('id', $qId)->exists()) {
+                        $onboardingStep = OnboardingStep::find($qId);
+                        DB::table('questions')->insertOrIgnore([
+                            'id' => $qId,
+                            'religion_id' => $onboardingStep->religion_id ?? $rId,
+                            'time_slot_id' => $tId ?? null,
+                            'question' => $onboardingStep->question ?? ('Onboarding Question ' . $qId),
+                            'status' => 1
+                            
+                        ]);
+                    }
+
+                    $rawAnswer = $ans['answer'] ?? null;
+                    if (is_null($rawAnswer)) {
+                        $answerVal = null;
+                    } elseif (is_string($rawAnswer)) {
+                        $strLower = strtolower(trim($rawAnswer));
+                        $answerVal = in_array($strLower, ['yes', 'true', '1'], true) ? 1 : (in_array($strLower, ['no', 'false', '0'], true) ? 0 : (int)$rawAnswer);
+                    } else {
+                        $answerVal = (int) $rawAnswer;
+                    }
+
+                    UserAnswer::updateOrCreate(
+                        [
+                            'user_id' => $user->id,
+                            'question_id' => $qId,
+                        ],
+                        [
+                            'religion_id' => $rId,
+                            'time_slot_id' => $tId,
+                            'answer' => $answerVal,
+                            'answered_at' => now(),
+                        ]
+                    );
+                } catch (\Throwable $e) {
+                    \Log::error('UserAnswer update error: ' . $e->getMessage());
+                }
+            }
+        }
+
+        $user->load('profile');
 
         return response()->json([
             'success' => true,
