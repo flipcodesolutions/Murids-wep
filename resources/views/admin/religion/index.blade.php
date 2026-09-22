@@ -63,7 +63,6 @@
             const fetchUrl = @json(route('religions.fetch'));
             const destroyUrl = @json(url('/religions'));
             const editUrl = @json(url('/religions'));
-            const storageBaseUrl = @json(asset('storage'));
             const noImageUrl = @json(asset('images/no-image.png'));
             const tableBody = document.getElementById('religionTableBody');
             const table = document.getElementById('dataTable');
@@ -129,12 +128,27 @@
                 });
             }
 
-            function getImageUrl(imagePath) {
+            const imagesBaseUrl = @json(asset('images'));
+
+            window.handleImageError = function(img) {
+                img.onerror = null;
+                img.src = noImageUrl;
+            };
+
+            function getImageUrl(item) {
+                if (typeof item === 'object' && item !== null && item.image_url) {
+                    return item.image_url;
+                }
+                const imagePath = typeof item === 'string' ? item : item?.image;
                 if (!imagePath) return noImageUrl;
                 if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
                     return imagePath;
                 }
-                return `${storageBaseUrl}/${imagePath.replace(/^\/+/, '')}`;
+                const cleanPath = imagePath.replace(/^\/?(storage|images)\//, '').replace(/^\/+/, '');
+                if (cleanPath.startsWith('religions/')) {
+                    return `${imagesBaseUrl}/${cleanPath}`;
+                }
+                return `${imagesBaseUrl}/religions/${cleanPath}`;
             }
 
             function renderRows(religions, page = 1, perPage = 10) {
@@ -149,12 +163,12 @@
                         <td>
                             <div style="display:flex; align-items:center; gap:10px;">
                                 <img
-                                    src="${getImageUrl(religion.image)}"
+                                    src="${getImageUrl(religion)}"
                                     alt="${escapeHtml(religion.name)}"
                                     width="40"
                                     height="40"
                                     style="object-fit:cover; border-radius:6px;"
-                                    onerror="this.onerror=null;this.src='${noImageUrl}';"
+                                    onerror="handleImageError(this)"
                                 >
                                 <span>${escapeHtml(religion.name)}</span>
                             </div>

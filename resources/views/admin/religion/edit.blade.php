@@ -28,7 +28,7 @@
                             <div class="invalid-feedback">Please upload a valid image file.</div>
                             @if ($religion->image_url)
                                 <div class="mt-2">
-                                    <img src="{{ $religion->image_url }}" alt="{{ $religion->name }}" class="rounded border" style="max-height: 80px; max-width: 120px; object-fit: cover;">
+                                    <img src="{{ $religion->image_url }}" alt="{{ $religion->name }}" class="rounded border" style="max-height: 80px; max-width: 120px; object-fit: cover;" onerror="this.onerror=null;this.src='data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'100\' height=\'100\' viewBox=\'0 0 100 100\'%3E%3Crect width=\'100\' height=\'100\' fill=\'%23f1f5f9\'/%3E%3Ctext x=\'50%25\' y=\'50%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' font-family=\'sans-serif\' font-size=\'12\' fill=\'%2394a3b8\'%3ENo Image%3C/text%3E%3C/svg%3E';">
                                     <small class="d-block text-muted mt-1">Current image</small>
                                 </div>
                             @endif

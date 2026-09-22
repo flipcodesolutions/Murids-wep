@@ -23,7 +23,6 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::post('/religions/store', [ReligionController::class, 'store'])->name('religions.store');
     Route::get('/religions/{religion}/edit', [ReligionController::class, 'edit'])->name('religions.edit');
     Route::post('/religions/{religion}/update', [ReligionController::class, 'update'])->name('religions.update');
-    Route::get('/religions/{religion}/image', [ReligionController::class, 'image'])->name('religions.image');
     Route::delete('/religions/{religion}', [ReligionController::class, 'destroy'])->name('religions.destroy');
 
     Route::get('/users/index', [UsersController::class, 'index'])->name('users.index');

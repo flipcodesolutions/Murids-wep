@@ -31,18 +31,27 @@ class Religion extends Model
     {
         return Attribute::get(function (): ?string {
             if (! $this->image) {
-                return null;
+                return asset('images/no-image.png');
             }
 
             if (str_starts_with($this->image, 'http://') || str_starts_with($this->image, 'https://')) {
                 return $this->image;
             }
 
-            if (str_starts_with($this->image, 'storage/')) {
-                return asset($this->image);
+            $cleanPath = ltrim($this->image, '/');
+
+            if (str_starts_with($cleanPath, 'images/')) {
+                $cleanPath = substr($cleanPath, 7);
+            }
+            if (str_starts_with($cleanPath, 'storage/')) {
+                $cleanPath = substr($cleanPath, 8);
             }
 
-            return asset('storage/' . $this->image);
+            if (str_starts_with($cleanPath, 'religions/')) {
+                return asset('images/' . $cleanPath);
+            }
+
+            return asset('images/religions/' . $cleanPath);
         });
     }
 

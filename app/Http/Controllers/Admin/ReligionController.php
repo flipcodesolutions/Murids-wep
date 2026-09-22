@@ -52,7 +52,14 @@ class ReligionController extends Controller
         ]);
 
         if ($request->hasFile('image')) {
-            $validated['image'] = $request->file('image')->store('religions', 'public');
+            $file = $request->file('image');
+            $filename = time() . '_' . \Illuminate\Support\Str::random(10) . '.' . $file->getClientOriginalExtension();
+            $targetDir = public_path('images/religions');
+            if (!file_exists($targetDir)) {
+                @mkdir($targetDir, 0755, true);
+            }
+            $file->move($targetDir, $filename);
+            $validated['image'] = 'religions/' . $filename;
         }
 
         $validated['status'] = $request->boolean('status', true);
@@ -77,7 +84,15 @@ class ReligionController extends Controller
 
         if ($request->hasFile('image')) {
             $this->deleteImage($religion->image);
-            $validated['image'] = $request->file('image')->store('religions', 'public');
+
+            $file = $request->file('image');
+            $filename = time() . '_' . \Illuminate\Support\Str::random(10) . '.' . $file->getClientOriginalExtension();
+            $targetDir = public_path('images/religions');
+            if (!file_exists($targetDir)) {
+                @mkdir($targetDir, 0755, true);
+            }
+            $file->move($targetDir, $filename);
+            $validated['image'] = 'religions/' . $filename;
         }
 
         $validated['status'] = $request->boolean('status', true);
@@ -89,6 +104,20 @@ class ReligionController extends Controller
             'message' => 'Religion updated successfully.',
             'data' => $religion->fresh(),
         ]);
+    }
+
+    public function image(Religion $religion)
+    {
+        if ($religion->image_url) {
+            return redirect($religion->image_url);
+        }
+
+        $noImagePath = public_path('images/no-image.png');
+        if (file_exists($noImagePath)) {
+            return response()->file($noImagePath);
+        }
+
+        return abort(404);
     }
 
     public function destroy(Religion $religion): JsonResponse
@@ -104,8 +133,28 @@ class ReligionController extends Controller
 
     private function deleteImage(?string $path): void
     {
-        if ($path && Storage::disk('public')->exists($path)) {
-            Storage::disk('public')->delete($path);
+        if (!$path) return;
+
+        $cleanPath = ltrim($path, '/');
+        if (str_starts_with($cleanPath, 'images/')) {
+            $cleanPath = substr($cleanPath, 7);
+        }
+        if (str_starts_with($cleanPath, 'storage/')) {
+            $cleanPath = substr($cleanPath, 8);
+        }
+        $filename = basename($cleanPath);
+
+        $possibleFiles = [
+            public_path('images/religions/' . $filename),
+            public_path('images/' . $cleanPath),
+            public_path('storage/religions/' . $filename),
+            storage_path('app/public/religions/' . $filename),
+        ];
+
+        foreach ($possibleFiles as $file) {
+            if (file_exists($file) && is_file($file)) {
+                @unlink($file);
+            }
         }
     }
 }

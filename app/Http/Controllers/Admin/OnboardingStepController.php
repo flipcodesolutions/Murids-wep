@@ -56,14 +56,17 @@ class OnboardingStepController extends Controller
         $validated = $request->validate([
             'question' => 'required|string|max:255',
             'religion_id' => 'required|exists:religions,id',
-            'options' => 'required|array|min:1',
-            'options.*' => 'required|string|max:255',
+            'yes_response' => 'nullable|string|max:255',
+            'no_response' => 'nullable|string|max:255',
+            'yes' => 'nullable|string|max:255',
+            'no' => 'nullable|string|max:255',
         ]);
 
         OnboardingStep::create([
             'question' => $validated['question'],
             'religion_id' => $validated['religion_id'],
-            'options' => $validated['options'],
+            'yes_response' => $request->input('yes_response', $request->input('yes')),
+            'no_response' => $request->input('no_response', $request->input('no')),
         ]);
 
         return response()->json([
@@ -77,11 +80,18 @@ class OnboardingStepController extends Controller
         $validated = $request->validate([
             'question' => 'required|string|max:255',
             'religion_id' => 'required|exists:religions,id',
-            'options' => 'required|array|min:1',
-            'options.*' => 'required|string|max:255',
+            'yes_response' => 'nullable|string|max:255',
+            'no_response' => 'nullable|string|max:255',
+            'yes' => 'nullable|string|max:255',
+            'no' => 'nullable|string|max:255',
         ]);
 
-        $onboardingStep->update($validated);
+        $onboardingStep->update([
+            'question' => $validated['question'],
+            'religion_id' => $validated['religion_id'],
+            'yes_response' => $request->input('yes_response', $request->input('yes')),
+            'no_response' => $request->input('no_response', $request->input('no')),
+        ]);
 
         return response()->json([
             'success' => true,

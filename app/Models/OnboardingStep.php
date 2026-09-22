@@ -11,11 +11,8 @@ class OnboardingStep extends Model
     protected $fillable = [
         'religion_id',
         'question',
-        'options',
-    ];
-
-    protected $casts = [
-        'options' => 'array',
+        'yes_response',
+        'no_response',
     ];
 
     public function religion()

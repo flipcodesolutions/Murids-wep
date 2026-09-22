@@ -37,7 +37,54 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Successful operation"
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Onboarding steps fetched successfully."
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "integer",
+                                                        "example": 1
+                                                    },
+                                                    "religion_id": {
+                                                        "type": "integer",
+                                                        "example": 1
+                                                    },
+                                                    "question": {
+                                                        "type": "string",
+                                                        "example": "Are you practicing?"
+                                                    },
+                                                    "yes_response": {
+                                                        "type": "string",
+                                                        "example": "Yes",
+                                                        "nullable": true
+                                                    },
+                                                    "no_response": {
+                                                        "type": "string",
+                                                        "example": "No",
+                                                        "nullable": true
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -202,8 +249,8 @@
                 "tags": [
                     "Users"
                 ],
-                "summary": "Delete user account",
-                "description": "Deletes a user by ID",
+                "summary": "Delete user account and all data",
+                "description": "Permanently deletes a user and all their associated records from the project by user ID",
                 "operationId": "deleteUser",
                 "parameters": [
                     {

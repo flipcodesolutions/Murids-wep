@@ -18,7 +18,7 @@
             <form id="onboardingStepForm" novalidate>
                 <div class="row g-4">
 
-                    <div class="col-md-6">
+                    <div class="col-md-12">
                         <label for="religion_id" class="form-label-custom">Religion <span class="text-danger">*</span></label>
                         <select class="form-select form-control-custom" id="religion_id" name="religion_id" required>
                             <option value="">Select Religion</option>
@@ -37,30 +37,14 @@
                         <div class="invalid-feedback">Please enter a question.</div>
                     </div>
 
-                    <div class="col-12">
-                        <label class="form-label-custom">Options <span class="text-danger">*</span></label>
-                        <div id="optionsWrapper">
-                            @forelse (($onboardingStep->options ?? []) as $option)
-                                <div class="input-group mb-2 option-row">
-                                    <input type="text" name="options[]" class="form-control form-control-custom" value="{{ $option }}" placeholder="Enter option" required>
-                                    <button type="button" class="btn btn-outline-danger removeOptionBtn">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                </div>
-                            @empty
-                                <div class="input-group mb-2 option-row">
-                                    <input type="text" name="options[]" class="form-control form-control-custom" placeholder="Enter option" required>
-                                    <button type="button" class="btn btn-outline-danger removeOptionBtn d-none">
-                                        <i class="bi bi-trash"></i>
-                                    </button>
-                                </div>
-                            @endforelse
-                        </div>
+                    <div class="col-md-6">
+                        <label for="yes_response" class="form-label-custom">Option :- Yes</label>
+                        <input type="text" class="form-control form-control-custom" id="yes_response" name="yes_response" value="{{ $onboardingStep->yes_response }}" placeholder="Enter response for Yes">
+                    </div>
 
-                        <button type="button" class="btn btn-sm btn-outline-primary mt-2" id="addOptionBtn">
-                            <i class="bi bi-plus-lg me-1"></i> Add Option
-                        </button>
-                        <div class="invalid-feedback d-block" id="optionsError"></div>
+                    <div class="col-md-6">
+                        <label for="no_response" class="form-label-custom">Option :- No</label>
+                        <input type="text" class="form-control form-control-custom" id="no_response" name="no_response" value="{{ $onboardingStep->no_response }}" placeholder="Enter response for No">
                     </div>
 
                 </div>
@@ -84,9 +68,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const indexUrl = @json(route('onboarding-steps.index'));
     const form = document.getElementById('onboardingStepForm');
     const submitBtn = document.getElementById('submitBtn');
-    const optionsWrapper = document.getElementById('optionsWrapper');
-    const addOptionBtn = document.getElementById('addOptionBtn');
-    const optionsError = document.getElementById('optionsError');
 
     function getCsrfToken() {
         const meta = document.querySelector('meta[name="csrf-token"]');
@@ -100,56 +81,12 @@ document.addEventListener('DOMContentLoaded', function() {
         else toastr.info(message);
     }
 
-    function bindRemoveButtons() {
-        document.querySelectorAll('.removeOptionBtn').forEach(btn => {
-            btn.onclick = function() {
-                const rows = document.querySelectorAll('.option-row');
-                if (rows.length > 1) {
-                    this.closest('.option-row').remove();
-                    toggleRemoveButtons();
-                }
-            };
-        });
-    }
-
-    function toggleRemoveButtons() {
-        const rows = document.querySelectorAll('.option-row');
-        rows.forEach(row => {
-            const btn = row.querySelector('.removeOptionBtn');
-            if (btn) btn.classList.toggle('d-none', rows.length === 1);
-        });
-    }
-
-    addOptionBtn.addEventListener('click', function() {
-        const div = document.createElement('div');
-        div.className = 'input-group mb-2 option-row';
-        div.innerHTML = `
-            <input type="text" name="options[]" class="form-control form-control-custom" placeholder="Enter option" required>
-            <button type="button" class="btn btn-outline-danger removeOptionBtn">
-                <i class="bi bi-trash"></i>
-            </button>
-        `;
-        optionsWrapper.appendChild(div);
-        bindRemoveButtons();
-        toggleRemoveButtons();
-    });
-
     form.addEventListener('submit', function(e) {
         e.preventDefault();
-        optionsError.textContent = '';
 
         if (!form.checkValidity()) {
             form.classList.add('was-validated');
             showToast('Please fill in all required fields correctly.', 'warning');
-            return;
-        }
-
-        const optionInputs = [...document.querySelectorAll('input[name="options[]"]')];
-        const validOptions = optionInputs.map(input => input.value.trim()).filter(Boolean);
-
-        if (!validOptions.length) {
-            optionsError.textContent = 'Please add at least one option.';
-            showToast('Please add at least one option.', 'warning');
             return;
         }
 
@@ -193,9 +130,6 @@ document.addEventListener('DOMContentLoaded', function() {
             submitBtn.innerHTML = originalText;
         });
     });
-
-    bindRemoveButtons();
-    toggleRemoveButtons();
 });
 </script>
 @endpush

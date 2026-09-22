@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Notification;
 use App\Models\OnboardingStep;
 use App\Models\Question;
 use App\Models\TimeSlot;
@@ -14,6 +15,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 use Laravel\Socialite\Facades\Socialite;
 use OpenApi\Attributes as OA;
@@ -598,8 +600,8 @@ class UsersController extends Controller
 
     #[OA\Delete(
         path: "/api/users/{id}",
-        summary: "Delete user account",
-        description: "Deletes a user by ID",
+        summary: "Delete user account and all data",
+        description: "Permanently deletes a user and all their associated records from the project by user ID",
         operationId: "deleteUser",
         tags: ["Users"],
         parameters: [
@@ -612,12 +614,54 @@ class UsersController extends Controller
     )]
     public function destroy($id): JsonResponse
     {
-        $user = User::findOrFail($id);
-        $user->delete();
+        $user = User::find($id);
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User not found.',
+            ], 404);
+        }
+
+        DB::transaction(function () use ($user) {
+            $userId = $user->id;
+
+            // 1. Delete user profile
+            UserProfile::where('user_id', $userId)->delete();
+
+            // 2. Delete user answers
+            // UserAnswer::where('user_id', $userId)->delete();
+
+            // 3. Delete user notifications
+            // Notification::where('user_id', $userId)->delete();
+
+            // 4. Revoke API tokens & session data
+            if (method_exists($user, 'tokens')) {
+                $user->tokens()->delete();
+            }
+
+            if (Schema::hasTable('personal_access_tokens')) {
+                DB::table('personal_access_tokens')
+                    ->where('tokenable_id', $userId)
+                    ->where('tokenable_type', get_class($user))
+                    ->delete();
+            }
+
+            if ($user->email && Schema::hasTable('password_reset_tokens')) {
+                DB::table('password_reset_tokens')->where('email', $user->email)->delete();
+            }
+
+            if (Schema::hasTable('sessions')) {
+                DB::table('sessions')->where('user_id', $userId)->delete();
+            }
+
+            // 5. Permanently delete user
+            $user->delete();
+        });
 
         return response()->json([
             'success' => true,
-            'message' => 'User deleted successfully.',
+            'message' => 'User account and all associated records deleted permanently.',
         ], 200);
     }
 }

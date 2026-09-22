@@ -38,13 +38,14 @@
                                 <th>#</th>
                                 <th>Religion</th>
                                 <th>Question</th>
-                                <th>Options</th>
+                                <th>Yes Response</th>
+                                <th>No Response</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody id="stepTableBody">
                             <tr>
-                                <td colspan="5" class="text-center py-4 text-muted">Loading onboarding steps...</td>
+                                <td colspan="6" class="text-center py-4 text-muted">Loading onboarding steps...</td>
                             </tr>
                         </tbody>
                     </table>
@@ -111,13 +112,6 @@
                 });
             }
 
-            function renderOptions(options) {
-                if (!Array.isArray(options) || !options.length) return '-';
-                return options.map(option =>
-                    `<span class="badge bg-light text-dark border me-1 mb-1">${escapeHtml(option)}</span>`
-                ).join('');
-            }
-
             function loadReligions() {
                 fetch(`${religionsUrl}?per_page=100`, {
                     headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
@@ -141,7 +135,7 @@
 
             function renderRows(rows, page = 1, perPage = 10) {
                 if (!rows.length) {
-                    tableBody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted">No onboarding steps found.</td></tr>';
+                    tableBody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-muted">No onboarding steps found.</td></tr>';
                     return;
                 }
 
@@ -150,7 +144,8 @@
                         <td>${((page - 1) * perPage) + index + 1}</td>
                         <td>${escapeHtml(item.religion?.name || '-')}</td>
                         <td>${escapeHtml(truncateText(item.question, 80))}</td>
-                        <td>${renderOptions(item.options)}</td>
+                        <td>${escapeHtml(item.yes_response || '-')}</td>
+                        <td>${escapeHtml(item.no_response || '-')}</td>
                         <td>
                             <div class="table-actions">
                                 <a href="${editUrl}/${item.id}/edit" class="btn-action edit" title="Edit">
@@ -195,7 +190,7 @@
                         renderPagination(result, 'paginationWrapper', 'tableInfo', page => loadSteps(page, currentReligion, currentSearch));
                     })
                     .catch(error => {
-                        tableBody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-danger">Failed to load onboarding steps.</td></tr>';
+                        tableBody.innerHTML = '<tr><td colspan="6" class="text-center py-4 text-danger">Failed to load onboarding steps.</td></tr>';
                         renderPagination({}, 'paginationWrapper', 'tableInfo');
                         console.error(error);
                     });
@@ -203,7 +198,7 @@
 
             function deleteStep(id, btn) {
                 Swal.fire({
-                    title: 'Delete Onboarding Step?',
+                    title: 'Delete Onboarding Question?',
                     text: 'This action cannot be undone.',
                     icon: 'warning',
                     showCancelButton: true,
