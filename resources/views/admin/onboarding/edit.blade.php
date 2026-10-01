@@ -23,9 +23,9 @@
                         <select class="form-select form-control-custom" id="religion_id" name="religion_id" required>
                             <option value="">Select Religion</option>
                             @foreach ($religions as $religion)
-                                <option value="{{ $religion->id }}" {{ $onboardingStep->religion_id == $religion->id ? 'selected' : '' }}>
-                                    {{ $religion->name }}
-                                </option>
+                            <option value="{{ $religion->id }}" {{ $onboardingStep->religion_id == $religion->id ? 'selected' : '' }}>
+                                {{ $religion->name }}
+                            </option>
                             @endforeach
                         </select>
                         <div class="invalid-feedback">Please select a religion.</div>
@@ -38,15 +38,24 @@
                     </div>
 
                     <div class="col-md-6">
+                        <label for="yes_response_title" class="form-label-custom">Option :- Yes Title</label>
+                        <input type="text" class="form-control form-control-custom" id="yes_response_title" name="yes_response_title" value="{{ $onboardingStep->yes_response_title }}" placeholder="Enter response for Yes">
+                    </div>
+
+                    <div class="col-md-6">
                         <label for="yes_response" class="form-label-custom">Option :- Yes</label>
                         <input type="text" class="form-control form-control-custom" id="yes_response" name="yes_response" value="{{ $onboardingStep->yes_response }}" placeholder="Enter response for Yes">
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="no_response_title" class="form-label-custom">Option :- No Title</label>
+                        <input type="text" class="form-control form-control-custom" id="no_response_title" name="no_response_title" value="{{ $onboardingStep->no_response_title }}" placeholder="Enter response for No">
                     </div>
 
                     <div class="col-md-6">
                         <label for="no_response" class="form-label-custom">Option :- No</label>
                         <input type="text" class="form-control form-control-custom" id="no_response" name="no_response" value="{{ $onboardingStep->no_response }}" placeholder="Enter response for No">
                     </div>
-
                 </div>
 
                 <div class="form-actions mt-4">
@@ -63,73 +72,73 @@
 
 @push('scripts')
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const updateUrl = @json(route('onboarding-steps.update', $onboardingStep->id));
-    const indexUrl = @json(route('onboarding-steps.index'));
-    const form = document.getElementById('onboardingStepForm');
-    const submitBtn = document.getElementById('submitBtn');
+    document.addEventListener('DOMContentLoaded', function() {
+        const updateUrl = @json(route('onboarding-steps.update', $onboardingStep -> id));
+        const indexUrl = @json(route('onboarding-steps.index'));
+        const form = document.getElementById('onboardingStepForm');
+        const submitBtn = document.getElementById('submitBtn');
 
-    function getCsrfToken() {
-        const meta = document.querySelector('meta[name="csrf-token"]');
-        return meta ? meta.getAttribute('content') : '';
-    }
-
-    function showToast(message, type) {
-        if (type === 'success') toastr.success(message);
-        else if (type === 'error') toastr.error(message);
-        else if (type === 'warning') toastr.warning(message);
-        else toastr.info(message);
-    }
-
-    form.addEventListener('submit', function(e) {
-        e.preventDefault();
-
-        if (!form.checkValidity()) {
-            form.classList.add('was-validated');
-            showToast('Please fill in all required fields correctly.', 'warning');
-            return;
+        function getCsrfToken() {
+            const meta = document.querySelector('meta[name="csrf-token"]');
+            return meta ? meta.getAttribute('content') : '';
         }
 
-        const originalText = submitBtn.innerHTML;
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1 text-white"></span> <span class="text-white">Updating...</span>';
+        function showToast(message, type) {
+            if (type === 'success') toastr.success(message);
+            else if (type === 'error') toastr.error(message);
+            else if (type === 'warning') toastr.warning(message);
+            else toastr.info(message);
+        }
 
-        const formData = new FormData(form);
-        formData.append('_method', 'PUT');
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
 
-        fetch(updateUrl, {
-            method: 'POST',
-            headers: {
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': getCsrfToken(),
-                'X-Requested-With': 'XMLHttpRequest',
-            },
-            body: formData,
-        })
-        .then(response => response.json().then(data => {
-            if (!response.ok) throw data;
-            return data;
-        }))
-        .then(result => {
-            showToast(result.message || 'Onboarding step updated successfully.', 'success');
-            setTimeout(() => {
-                window.location.href = indexUrl;
-            }, 1500);
-        })
-        .catch(error => {
-            let message = 'Failed to update onboarding step.';
-            if (error?.errors) {
-                message = Object.values(error.errors).flat().join(' ');
-            } else if (error?.message) {
-                message = error.message;
+            if (!form.checkValidity()) {
+                form.classList.add('was-validated');
+                showToast('Please fill in all required fields correctly.', 'warning');
+                return;
             }
-            showToast(message, 'error');
-        })
-        .finally(() => {
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = originalText;
+
+            const originalText = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1 text-white"></span> <span class="text-white">Updating...</span>';
+
+            const formData = new FormData(form);
+            formData.append('_method', 'PUT');
+
+            fetch(updateUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': getCsrfToken(),
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                    body: formData,
+                })
+                .then(response => response.json().then(data => {
+                    if (!response.ok) throw data;
+                    return data;
+                }))
+                .then(result => {
+                    showToast(result.message || 'Onboarding step updated successfully.', 'success');
+                    setTimeout(() => {
+                        window.location.href = indexUrl;
+                    }, 1500);
+                })
+                .catch(error => {
+                    let message = 'Failed to update onboarding step.';
+                    if (error?.errors) {
+                        message = Object.values(error.errors).flat().join(' ');
+                    } else if (error?.message) {
+                        message = error.message;
+                    }
+                    showToast(message, 'error');
+                })
+                .finally(() => {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalText;
+                });
         });
     });
-});
 </script>
 @endpush

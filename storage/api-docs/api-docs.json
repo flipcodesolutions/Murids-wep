@@ -75,6 +75,16 @@
                                                         "type": "string",
                                                         "example": "No",
                                                         "nullable": true
+                                                    },
+                                                    "yes_response_title": {
+                                                        "type": "string",
+                                                        "example": "Yes",
+                                                        "nullable": true
+                                                    },
+                                                    "no_response_title": {
+                                                        "type": "string",
+                                                        "example": "No",
+                                                        "nullable": true
                                                     }
                                                 },
                                                 "type": "object"

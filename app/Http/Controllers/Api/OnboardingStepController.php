@@ -43,7 +43,9 @@ class OnboardingStepController extends Controller
                                     new OA\Property(property: "religion_id", type: "integer", example: 1),
                                     new OA\Property(property: "question", type: "string", example: "Are you practicing?"),
                                     new OA\Property(property: "yes_response", type: "string", nullable: true, example: "Yes"),
-                                    new OA\Property(property: "no_response", type: "string", nullable: true, example: "No")
+                                    new OA\Property(property: "no_response", type: "string", nullable: true, example: "No"),
+                                    new OA\Property(property: "yes_response_title", type: "string", nullable: true, example: "Yes"),
+                                    new OA\Property(property: "no_response_title", type: "string", nullable: true, example: "No")
                                 ]
                             )
                         )
@@ -54,7 +56,7 @@ class OnboardingStepController extends Controller
     )]
     public function index(Request $request): JsonResponse
     {
-        $query = OnboardingStep::select('id', 'religion_id', 'question', 'yes_response', 'no_response')
+        $query = OnboardingStep::select('id', 'religion_id', 'question', 'yes_response', 'no_response', 'yes_response_title', 'no_response_title')
             ->whereHas('religion', function ($q) {
                 $q->where('status', 1);
             });

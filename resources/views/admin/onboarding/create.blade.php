@@ -36,10 +36,17 @@
                         </div>
 
                         <div class="col-md-6">
+                            <label for="yes_response_title" class="form-label-custom">Option :- Yes Title</label>
+                            <input type="text" class="form-control form-control-custom" id="yes_response_title" name="yes_response_title" placeholder="Enter response for Yes">
+                        </div>
+                        <div class="col-md-6">
                             <label for="yes_response" class="form-label-custom">Option :- Yes</label>
                             <input type="text" class="form-control form-control-custom" id="yes_response" name="yes_response" placeholder="Enter response for Yes">
                         </div>
-
+                        <div class="col-md-6">
+                            <label for="no_response_title" class="form-label-custom">Option :- No Title</label>
+                            <input type="text" class="form-control form-control-custom" id="no_response_title" name="no_response_title" placeholder="Enter response for No">
+                        </div>
                         <div class="col-md-6">
                             <label for="no_response" class="form-label-custom">Option :- No</label>
                             <input type="text" class="form-control form-control-custom" id="no_response" name="no_response" placeholder="Enter response for No">

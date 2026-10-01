@@ -13,6 +13,8 @@ class OnboardingStep extends Model
         'question',
         'yes_response',
         'no_response',
+        'yes_response_title',
+        'no_response_title'
     ];
 
     public function religion()

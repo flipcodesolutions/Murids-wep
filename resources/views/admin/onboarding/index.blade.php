@@ -38,7 +38,9 @@
                                 <th>#</th>
                                 <th>Religion</th>
                                 <th>Question</th>
+                                <th>Yes Response Title</th>
                                 <th>Yes Response</th>
+                                <th>No Response Title</th>
                                 <th>No Response</th>
                                 <th>Actions</th>
                             </tr>
@@ -144,7 +146,9 @@
                         <td>${((page - 1) * perPage) + index + 1}</td>
                         <td>${escapeHtml(item.religion?.name || '-')}</td>
                         <td>${escapeHtml(truncateText(item.question, 80))}</td>
+                        <td>${escapeHtml(item.yes_response_title || '-')}</td>
                         <td>${escapeHtml(item.yes_response || '-')}</td>
+                        <td>${escapeHtml(item.no_response_title || '-')}</td>
                         <td>${escapeHtml(item.no_response || '-')}</td>
                         <td>
                             <div class="table-actions">

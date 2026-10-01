@@ -58,6 +58,8 @@ class OnboardingStepController extends Controller
             'religion_id' => 'required|exists:religions,id',
             'yes_response' => 'nullable|string|max:255',
             'no_response' => 'nullable|string|max:255',
+            'yes_response_title' => 'nullable|string|max:255',
+            'no_response_title' => 'nullable|string|max:255',
             'yes' => 'nullable|string|max:255',
             'no' => 'nullable|string|max:255',
         ]);
@@ -67,6 +69,8 @@ class OnboardingStepController extends Controller
             'religion_id' => $validated['religion_id'],
             'yes_response' => $request->input('yes_response', $request->input('yes')),
             'no_response' => $request->input('no_response', $request->input('no')),
+            'yes_response_title' => $request->input('yes_response_title', $request->input('yes_title')),
+            'no_response_title' => $request->input('no_response_title', $request->input('no_title')),
         ]);
 
         return response()->json([
@@ -82,6 +86,8 @@ class OnboardingStepController extends Controller
             'religion_id' => 'required|exists:religions,id',
             'yes_response' => 'nullable|string|max:255',
             'no_response' => 'nullable|string|max:255',
+            'yes_response_title' => 'nullable|string|max:255',
+            'no_response_title' => 'nullable|string|max:255',
             'yes' => 'nullable|string|max:255',
             'no' => 'nullable|string|max:255',
         ]);
@@ -91,6 +97,8 @@ class OnboardingStepController extends Controller
             'religion_id' => $validated['religion_id'],
             'yes_response' => $request->input('yes_response', $request->input('yes')),
             'no_response' => $request->input('no_response', $request->input('no')),
+            'yes_response_title' => $request->input('yes_response_title', $request->input('yes_title')),
+            'no_response_title' => $request->input('no_response_title', $request->input('no_title')),
         ]);
 
         return response()->json([
@@ -109,3 +117,4 @@ class OnboardingStepController extends Controller
         ]);
     }
 }
+    
